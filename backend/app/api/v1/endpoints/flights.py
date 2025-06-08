@@ -10,4 +10,4 @@ def get_flights():
 
     return {"message": "Listing top available flights.."}
 
-
+# check: # https://serpapi.com/google-hotels-api
