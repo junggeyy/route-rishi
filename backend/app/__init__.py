@@ -8,8 +8,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# main router from t
-# he api module
+# main router from the api module
 app.include_router(main_router, prefix="/api")
 
 @app.get("/")
