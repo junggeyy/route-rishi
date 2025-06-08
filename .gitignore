@@ -1,2 +1,10 @@
 # general files
 docu.md
+
+# python virtual environment
+.venv/
+
+
+.vscode/
+.idea/
+.DS_Store
