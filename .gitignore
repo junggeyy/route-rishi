@@ -1,5 +1,6 @@
 # general files
 docu.md
+amadeus_response.json
 .env
 
 # python virtual environment

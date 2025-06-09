@@ -9,5 +9,7 @@ class Settings(BaseSettings):
 
     ExchangeRate_API_KEY: str
     TomorrowIO_API_KEY: str
+    AMADEUS_API_KEY: str
+    AMADEUS_API_SECRET: str
 
 settings = Settings()

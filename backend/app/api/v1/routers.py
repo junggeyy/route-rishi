@@ -9,7 +9,6 @@ load_dotenv()
 api_router = APIRouter()
 
 api_router.include_router(flights.router)
-# api_router.include_router(flights.router)
 # api_router.include_router(hotels.router)
 # api_router.include_router(attractions.router)
 api_router.include_router(weather.router)

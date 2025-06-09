@@ -1,5 +1,5 @@
 import requests
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List
 from datetime import datetime
 from urllib.parse import quote
 from app.core.config import settings
