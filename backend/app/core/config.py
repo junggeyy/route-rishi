@@ -11,5 +11,6 @@ class Settings(BaseSettings):
     TomorrowIO_API_KEY: str
     AMADEUS_API_KEY: str
     AMADEUS_API_SECRET: str
-
+    GEMINI_API_KEY: str
+    
 settings = Settings()

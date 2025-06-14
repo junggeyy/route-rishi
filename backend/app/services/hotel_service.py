@@ -268,7 +268,7 @@ class HotelService:
             return None
         
 
-    def find_hotel_with_offers(
+    def find_hotels_with_offers(
         self,
         city_code: str,
         check_in_date: date,
