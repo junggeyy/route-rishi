@@ -56,6 +56,9 @@ class WeatherService:
 
             summary = self.generate_weather_summary(weather_data)
             summary["forecast_date"] = forecast_date
+            summary["city"] = city 
+            summary["timesteps"] = timesteps
+            
             return summary
 
         except (requests.RequestException, ValueError, KeyError) as e:

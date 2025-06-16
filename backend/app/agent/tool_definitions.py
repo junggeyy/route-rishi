@@ -16,14 +16,14 @@ from app.schemas.hotel_schemas import HotelSearchByCityRequest, HotelOffersSearc
 # --- Weather Tool ---
 class WeatherToolInput(BaseModel):
     city: str = Field(description="The name of the target city (e.g., 'Paris', 'New York').")
-    timesteps: Literal["1d", "1h"] = Field("1d", description="Granularity of forecast: '1d' (daily) or '1h' (hourly). Default is '1d'.")
+    timesteps: Literal["1d", "1h"] = Field(description="Granularity of forecast: '1d' (daily) or '1h' (hourly).")
 
 weather_tool = StructuredTool.from_function(
     func=weather_service.get_weather_forecast,
     name="get_weather_forecast",
     description="Useful for retrieving weather forecasts for a specified city. "
                 "Provides a summary including temperature, rain, wind, UV index, humidity, and cloud cover. "
-                "Timesteps can be '1d' for daily average or '1h' for hourly forecast. "
+                "Requires a city name and timesteps ('1d' for daily average or '1h' for hourly). "
                 "Example: 'What's the weather in London tomorrow?' or 'Tell me the hourly forecast for Tokyo.'",
     args_schema=WeatherToolInput,
     verbose=True # on for debugging
@@ -87,8 +87,8 @@ hotel_tool = StructuredTool.from_function(
                 whether to get only the best rate, maximum number of hotels to search, and preferred amenities.
                 Example queries:
                 - 'Find a hotel in Paris for 2 adults checking in on 2025-07-01 and checking out on 2025-07-05.'
-                - 'Search for a 4 or 5-star hotel in London with a swimming pool, for 1 adult from tomorrow for 3 nights, maximum $500 total.'
-                - 'Are there any hotels in Tokyo with Wi-Fi available for 2 rooms, 4 adults total, next weekend?'
+                - 'Search for a 4 or 5-star hotel in London, for 1 adult from tomorrow for 3 nights, maximum $500 total.'
+                - 'Are there any hotels in Tokyo  available for 2 rooms, 4 adults total, next weekend?'
                 """,
     args_schema=HotelToolInput,
     verbose=True
