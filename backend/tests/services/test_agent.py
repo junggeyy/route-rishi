@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 from app.agent.travel_agent import travel_agent
 from datetime import date, timedelta
 
@@ -6,6 +7,9 @@ from app.core.config import settings
 print("Gemini API Key loaded:", bool(settings.GEMINI_API_KEY))
 
 async def main():
+    session_id = str(uuid.uuid4())
+    print(f"Starting new chat with session ID: {session_id}\n")
+    
     print("Welcome to the Trava AI Agent Playground!")
     print("Try asking questions like:")
     print("- What's the weather in Paris tomorrow?")
@@ -47,7 +51,7 @@ async def main():
         user_input = input("\nUser (type 'exit' to quit): ")
         if user_input.lower() == 'exit':
             break
-        agent_response = await travel_agent.run_query_async(user_input)
+        agent_response = await travel_agent.run_query_async(user_input, session_id)
         print(f"Trava: {agent_response}")
 
 if __name__ == "__main__":

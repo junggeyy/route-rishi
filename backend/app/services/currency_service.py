@@ -9,7 +9,7 @@ class CurrencyService:
     BASE_URL = f"https://v6.exchangerate-api.com/v6/{settings.ExchangeRate_API_KEY}"
 
 
-    def get_exchange_rate_to_usd(self, target_currency_code: str) -> Optional[float]:
+    def get_exchange_rate_to_usd(self, target_currency_code: str) -> str:
         """
         Fetches the exchange rate of a target currency to USD.
         Assumes the base currency for the API call is USD.
@@ -29,7 +29,7 @@ class CurrencyService:
             data = response.json()
             if data.get("result") == "success":
                 rate = data.get("conversion_rates", {}).get(target_currency_code.upper())
-                return rate
+                return f"The current exchange rate for {target_currency_code} is {rate}."
             else:
                 print(f"Error from ExchangeRate-API: {data.get('error-type')}")
                 return None

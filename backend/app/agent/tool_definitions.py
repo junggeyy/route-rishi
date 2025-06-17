@@ -31,7 +31,7 @@ weather_tool = StructuredTool.from_function(
 
 # --- Currency Tool ---
 class CurrencyToolInput(BaseModel):
-    code: str = Field(description="The three-letter currency code (e.g., 'EUR', 'GBP', 'JPY') to get its exchange rate to USD.")
+    target_currency_code: str = Field(description="The three-letter currency code (e.g., 'EUR', 'GBP', 'JPY') to get its exchange rate to USD.")
 
 currency_tool = StructuredTool.from_function(
     func=currency_service.get_exchange_rate_to_usd,
