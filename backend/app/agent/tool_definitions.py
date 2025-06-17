@@ -1,6 +1,6 @@
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional, Literal
 
 from app.services.weather_service import weather_service
@@ -8,10 +8,25 @@ from app.services.currency_service import currency_service
 from app.services.flight_service import flight_service
 from app.services.hotel_service import hotel_service
 
-from app.schemas.weather_schemas import WeatherForecastResponse
-from app.schemas.currency_schemas import CurrencyRateResponse
 from app.schemas.flight_schemas import FlightSearchRequest
-from app.schemas.hotel_schemas import HotelSearchByCityRequest, HotelOffersSearchRequest
+
+# --- Date Tool ---
+class DateToolInput(BaseModel):
+    """Input for getting current date information"""
+    pass
+
+def get_current_date() -> str:
+    """Get the current date and time information"""
+    now = datetime.now()
+    return f"Today is {now.strftime('%A, %B %d, %Y')}. Current time: {now.strftime('%H:%M')} UTC."
+
+date_tool = StructuredTool.from_function(
+    func=get_current_date,
+    name="get_current_date",
+    description="Get the current date and time. Use this when the user mentions relative dates like 'today', 'tomorrow', 'next week', etc.",
+    args_schema=DateToolInput,
+    verbose=True
+)
 
 # --- Weather Tool ---
 class WeatherToolInput(BaseModel):
@@ -95,4 +110,4 @@ hotel_tool = StructuredTool.from_function(
 )
 
 # Combine all tools
-all_tools = [weather_tool, currency_tool, flight_tool, hotel_tool]
+all_tools = [weather_tool, currency_tool, flight_tool, hotel_tool, date_tool]
