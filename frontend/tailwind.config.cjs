@@ -10,14 +10,14 @@ module.exports = {
       colors: {
         primary: '#1a1b23',
         secondary: '#2a2d3a',
-        accent: '#3b82f6',
+        accent: '#00d4aa',
         success: '#10b981',
         warning: '#f59e0b',
         danger: '#ef4444',
         'text-primary': '#f8fafc',
         'text-secondary': '#94a3b8',
         border: '#374151',
-        'travel-blue': '#00ffe0',
+        'travel-blue': '#00d4aa',
       },
       fontFamily: {
         sans: ['Inter', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],

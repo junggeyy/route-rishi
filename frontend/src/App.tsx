@@ -3,15 +3,30 @@ import { Sidebar } from './components/Sidebar';
 import { ChatInterface } from './components/ChatInterface';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { useChat } from './hooks/useChat';
-import { Menu } from 'lucide-react';
+import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import icon from './assets/icon.svg';
 
 function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Default open on desktop
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const chat = useChat();
 
   const handleSendMessage = async (message: string) => {
-    setSidebarOpen(false); // Close sidebar on mobile when sending message
+    // Close sidebar on mobile when sending message
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
     await chat.sendMessage(message);
+  };
+
+  const toggleSidebar = () => {
+    if (window.innerWidth < 1024) {
+      // Mobile: toggle open/close
+      setSidebarOpen(!sidebarOpen);
+    } else {
+      // Desktop: toggle collapsed/expanded
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
   };
 
   const showWelcome = !chat.currentConversation || chat.messages.length === 0;
@@ -28,9 +43,10 @@ function App() {
 
       {/* Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-80 lg:w-80
+        fixed lg:static inset-y-0 left-0 z-50 
+        ${sidebarCollapsed ? 'w-16 lg:w-16' : 'w-80 lg:w-80'}
         transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 transition-transform duration-300 ease-in-out
+        lg:translate-x-0 transition-all duration-300 ease-in-out
       `}>
         <Sidebar
           conversations={chat.conversations}
@@ -39,15 +55,16 @@ function App() {
           onNewConversation={chat.createNewConversation}
           onDeleteConversation={chat.deleteConversation}
           onCloseSidebar={() => setSidebarOpen(false)}
+          collapsed={sidebarCollapsed}
         />
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile header */}
-        <div className="lg:hidden flex items-center justify-between p-4 bg-secondary/50 border-b border-border/50">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 bg-secondary/50 border-b border-border/50 lg:hidden">
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={toggleSidebar}
             className="p-2 rounded-lg hover:bg-secondary/60 transition-colors"
           >
             <Menu className="w-6 h-6 text-text-primary" />
@@ -55,7 +72,7 @@ function App() {
           
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-br from-travel-blue to-accent rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">R</span>
+              <img src={icon} alt="RouteRishi" className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-lg font-bold gradient-text">RouteRishi</h1>
           </div>
@@ -64,7 +81,20 @@ function App() {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Desktop sidebar toggle */}
+          <button
+            onClick={toggleSidebar}
+            className="hidden lg:flex absolute top-4 left-4 z-10 p-2 bg-secondary/80 hover:bg-secondary border border-border/50 rounded-lg transition-all duration-200 hover:scale-105"
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen className="w-5 h-5 text-text-primary" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5 text-text-primary" />
+            )}
+          </button>
+
           {showWelcome ? (
             <WelcomeScreen onSendMessage={handleSendMessage} />
           ) : (

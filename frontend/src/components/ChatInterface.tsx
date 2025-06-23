@@ -104,151 +104,153 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       )}
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex items-start space-x-3 ${
-              message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-            }`}
-          >
-            {/* Avatar */}
-            <div className={`
-              flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center
-              ${message.type === 'user' 
-                ? 'bg-accent' 
-                : 'bg-gradient-to-br from-travel-blue to-accent'
-              }
-            `}>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+          {messages.map((message) => (
+            <div key={message.id} className="w-full">
               {message.type === 'user' ? (
-                <User className="w-4 h-4 text-white" />
+                /* User Message */
+                <div className="flex justify-end">
+                  <div className="bg-accent/80 text-white p-4 rounded-2xl max-w-2xl">
+                    <div 
+                      className="prose prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ 
+                        __html: formatMessageContent(message.content) 
+                      }}
+                    />
+                    <div className="text-xs mt-2 opacity-70 text-white/70">
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <Bot className="w-4 h-4 text-white" />
+                /* AI Message */
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-travel-blue to-accent flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="glass-card p-4 rounded-2xl text-text-primary">
+                      <div 
+                        className="prose prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{ 
+                          __html: formatMessageContent(message.content) 
+                        }}
+                      />
+                      <div className="text-xs mt-2 opacity-70 text-text-secondary">
+                        {message.timestamp.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
+          ))}
 
-            {/* Message Content */}
-            <div className={`
-              flex-1 max-w-4xl
-              ${message.type === 'user' ? 'flex justify-end' : ''}
-            `}>
-              <div className={`
-                p-4 rounded-2xl
-                ${message.type === 'user' 
-                  ? 'bg-accent text-white max-w-xl' 
-                  : 'glass-card text-text-primary'
-                }
-              `}>
-                <div 
-                  className="prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ 
-                    __html: formatMessageContent(message.content) 
-                  }}
-                />
-                <div className={`
-                  text-xs mt-2 opacity-70
-                  ${message.type === 'user' ? 'text-white/70' : 'text-text-secondary'}
-                `}>
-                  {message.timestamp.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
+          {/* Agent Thinking Display */}
+          {isAgentThinking && (
+            <div className="w-full">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-travel-blue to-accent flex items-center justify-center">
+                  <Cpu className="w-4 h-4 text-white" />
                 </div>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Agent Thinking Display */}
-        {isAgentThinking && (
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-travel-blue to-accent flex items-center justify-center">
-              <Cpu className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1 max-w-4xl">
-              <div className="agent-thinking">
-                <div className="flex items-center space-x-2 mb-3">
-                  <Loader2 className="w-4 h-4 text-accent animate-spin" />
-                  <span className="text-accent font-medium">RouteRishi is thinking...</span>
-                </div>
-                
-                {agentThoughts.map((thought) => (
-                  <div key={thought.id} className="mb-2 p-2 bg-secondary/30 rounded">
-                    <div className="text-xs text-travel-blue font-mono">
-                      Invoking: {thought.action}
+                <div className="flex-1">
+                  <div className="agent-thinking">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Loader2 className="w-4 h-4 text-accent animate-spin" />
+                      <span className="text-accent font-medium">RouteRishi is thinking...</span>
                     </div>
-                    {thought.output && (
-                      <div className="text-sm text-text-secondary mt-1">
-                        {thought.output}
+                    
+                    {agentThoughts.map((thought) => (
+                      <div key={thought.id} className="mb-2 p-2 bg-secondary/30 rounded">
+                        <div className="text-xs text-travel-blue font-mono">
+                          Invoking: {thought.action}
+                        </div>
+                        {thought.output && (
+                          <div className="text-sm text-text-secondary mt-1">
+                            {thought.output}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Loading Indicator */}
-        {isLoading && !isAgentThinking && (
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-travel-blue to-accent flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
-            </div>
-            <div className="glass-card p-4 rounded-2xl">
-              <div className="flex items-center space-x-2">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-accent rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                  <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                 </div>
-                <span className="text-text-secondary text-sm">RouteRishi is typing...</span>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div ref={messagesEndRef} />
+          {/* Loading Indicator */}
+          {isLoading && !isAgentThinking && (
+            <div className="w-full">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-travel-blue to-accent flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="glass-card p-4 rounded-2xl">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-accent rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                        <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                      </div>
+                      <span className="text-text-secondary text-sm">RouteRishi is typing...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Area */}
       <div className="border-t border-border/50 p-4">
-        <form onSubmit={handleSubmit} className="flex items-end space-x-3">
-          <div className="flex-1">
-            <textarea
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask me anything about your travel plans..."
-              className="input-field w-full resize-none min-h-[44px] max-h-32"
-              rows={1}
-              disabled={isLoading}
-            />
+        <div className="max-w-3xl mx-auto">
+          <form onSubmit={handleSubmit} className="flex items-center space-x-3">
+            <div className="flex-1">
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask me anything about your travel plans..."
+                className="input-field w-full resize-none min-h-[44px] max-h-32"
+                rows={1}
+                disabled={isLoading}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!inputValue.trim() || isLoading}
+              className={`
+                p-3 rounded-lg transition-all duration-200 flex-shrink-0
+                ${inputValue.trim() && !isLoading
+                  ? 'bg-accent hover:bg-accent/90 text-white hover:scale-105'
+                  : 'bg-secondary/50 text-text-secondary cursor-not-allowed'
+                }
+              `}
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
+          </form>
+          
+          {/* Input Hint */}
+          <div className="flex items-center justify-center mt-2 text-xs text-text-secondary">
+            <span>RouteRishi may make mistakes. Please check the information you receive.</span>
           </div>
-          <button
-            type="submit"
-            disabled={!inputValue.trim() || isLoading}
-            className={`
-              p-3 rounded-lg transition-all duration-200
-              ${inputValue.trim() && !isLoading
-                ? 'bg-accent hover:bg-accent/90 text-white hover:scale-105'
-                : 'bg-secondary/50 text-text-secondary cursor-not-allowed'
-              }
-            `}
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </button>
-        </form>
-        
-        {/* Input Hint */}
-        <div className="flex items-center justify-between mt-2 text-xs text-text-secondary">
-          <span>Press Enter to send, Shift+Enter for new line</span>
-          <span className="hidden sm:inline">Powered by AI • Real-time data</span>
         </div>
       </div>
     </div>
