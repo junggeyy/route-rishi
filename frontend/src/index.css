@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-primary text-text-primary font-sans;
+    background-image: 
+      radial-gradient(circle at center, #202040 0%, #1a1b23 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-secondary/80 backdrop-blur-xl border border-border/50 rounded-xl;
+  }
+  
+  .button-primary {
+    @apply bg-accent hover:bg-accent/90 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+  
+  .button-secondary {
+    @apply bg-secondary hover:bg-secondary/80 text-text-primary px-6 py-3 rounded-lg font-medium transition-all duration-200 border border-border/50 hover:border-accent/50;
+  }
+  
+  .input-field {
+    @apply bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-text-primary placeholder-text-secondary/60 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 transition-all duration-200;
+  }
+  
+  .message-bubble-user {
+    @apply bg-accent text-white rounded-2xl px-4 py-3 ml-auto max-w-xs lg:max-w-md;
+  }
+  
+  .message-bubble-ai {
+    @apply glass-card text-text-primary rounded-2xl px-4 py-3 mr-auto max-w-xs lg:max-w-md;
+  }
+  
+  .sidebar-item {
+    @apply flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-secondary/60 cursor-pointer;
+  }
+  
+  .sidebar-item.active {
+    @apply bg-accent/20 border-l-4 border-accent;
+  }
+  
+  .agent-thinking {
+    @apply glass-card p-4 mb-4 rounded-lg;
+  }
+  
+  .confirmation-card {
+    @apply glass-card p-6 rounded-xl border-accent/30;
+  }
+  
+  .travel-accent {
+    @apply text-travel-blue;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-travel-blue to-accent bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-secondary/30;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full hover:bg-accent/50;
+  }
+  
+  .animate-typing::after {
+    content: '|';
+    animation: blink 1s infinite;
+  }
+  
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+}
+
+/* Custom scrollbar for better UX */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-primary;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full hover:bg-accent/50;
+}
+
+/* Loading animations */
+.loading-dots {
+  display: inline-block;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+  100% { content: ''; }
+}
