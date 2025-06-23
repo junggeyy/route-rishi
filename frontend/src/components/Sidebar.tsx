@@ -80,10 +80,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* New Chat Button */}
         <button
           onClick={onNewConversation}
-          className={`w-full mt-4 button-primary flex items-center justify-center ${collapsed ? '' : 'space-x-2'}`}
+          className={`w-full mt-4 flex items-center justify-center transition-all duration-200 ${
+            collapsed 
+              ? 'p-3 bg-accent/80 hover:bg-accent text-white rounded-lg hover:scale-105' 
+              : 'button-primary space-x-2'
+          }`}
           title={collapsed ? "New Chat" : ""}
         >
-          <Plus className="w-5 h-5" />
+          <Plus className={collapsed ? "w-6 h-6" : "w-5 h-5"} />
           {!collapsed && <span>New Chat</span>}
         </button>
       </div>
@@ -163,20 +167,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Footer */}
       <div className="p-4 border-t border-border/50">
         {/* User Profile Placeholder */}
-        <div className={`flex items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors cursor-pointer ${collapsed ? 'justify-center' : 'space-x-3'}`}>
-          <div className="w-8 h-8 bg-gradient-to-br from-accent to-travel-blue rounded-full flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
+        {!collapsed && (
+          <div className="flex items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors cursor-pointer space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-accent to-travel-blue rounded-full flex items-center justify-center">
+              <User className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-text-primary">Guest User</p>
+              <p className="text-xs text-text-secondary">Ready to explore</p>
+            </div>
+            <Settings className="w-4 h-4 text-text-secondary" />
           </div>
-          {!collapsed && (
-            <>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text-primary">Guest User</p>
-                <p className="text-xs text-text-secondary">Ready to explore</p>
-              </div>
-              <Settings className="w-4 h-4 text-text-secondary" />
-            </>
-          )}
-        </div>
+        )}
         
         {/* Version/Status */}
         {!collapsed && (

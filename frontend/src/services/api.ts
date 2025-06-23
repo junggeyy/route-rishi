@@ -8,6 +8,7 @@ import type {
   ExchangeRate,
   ApiResponse,
   Message,
+  ToolCall,
 } from '../types';
 
 // Create axios instance with base configuration
@@ -110,6 +111,31 @@ export const chatApi = {
     } catch (error) {
       console.error('Chat message error:', error);
       throw new Error('Failed to send message');
+    }
+  },
+
+  sendMessageWithReasoning: async (
+    message: string, 
+    conversationId: string
+  ): Promise<{
+    response: string;
+    toolCalls: ToolCall[];
+    executionTimeMs: number;
+  }> => {
+    try {
+      const response = await api.post('/chat/message-with-reasoning', {
+        message,
+        conversation_id: conversationId,
+      });
+      
+      return {
+        response: response.data.response,
+        toolCalls: response.data.tool_calls || [],
+        executionTimeMs: response.data.total_execution_time_ms || 0,
+      };
+    } catch (error) {
+      console.error('Chat reasoning error:', error);
+      throw new Error('Failed to send message with reasoning');
     }
   },
 

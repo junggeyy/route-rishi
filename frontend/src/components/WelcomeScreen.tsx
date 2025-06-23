@@ -4,16 +4,18 @@ import {
   Globe,
   Star,
   Send,
-  Loader2
+  Loader2,
+  Brain
 } from 'lucide-react';
 import icon from '../assets/icon.svg';
 
 interface WelcomeScreenProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, withReasoning?: boolean) => void;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSendMessage }) => {
   const [inputValue, setInputValue] = useState('');
+  const [reasoningEnabled, setReasoningEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -22,7 +24,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSendMessage }) =
     if (!inputValue.trim() || isLoading) return;
     
     setIsLoading(true);
-    await onSendMessage(inputValue.trim());
+    await onSendMessage(inputValue.trim(), reasoningEnabled);
     setInputValue('');
     setIsLoading(false);
   };
@@ -70,14 +72,32 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSendMessage }) =
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Message RouteRishi..."
-                className="w-full min-h-[120px] p-4 pr-12 bg-secondary/50 border border-border/50 rounded-xl text-text-primary placeholder-text-secondary/60 resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 transition-all duration-200"
+                className="w-full min-h-[120px] p-4 pr-20 bg-secondary/50 border border-border/50 rounded-xl text-text-primary placeholder-text-secondary/60 resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 transition-all duration-200"
                 disabled={isLoading}
               />
+              
+              {/* Reasoning Toggle */}
+              <button
+                type="button"
+                onClick={() => setReasoningEnabled(!reasoningEnabled)}
+                className={`
+                  absolute bottom-3 right-14 p-2 rounded-lg transition-all duration-200 flex items-center space-x-1
+                  ${reasoningEnabled 
+                    ? 'bg-accent/20 text-accent border border-accent/30' 
+                    : 'bg-secondary/30 text-text-secondary border border-secondary/50'
+                  }
+                `}
+                title={reasoningEnabled ? 'Reasoning ON' : 'Reasoning OFF'}
+              >
+                <Brain className="w-4 h-4" />
+                <span>{reasoningEnabled ? 'Reasoning ON' : 'Reasoning OFF'}</span>
+              </button>
+              
               <button
                 type="submit"
                 disabled={!inputValue.trim() || isLoading}
                 className={`
-                  absolute bottom-3 right-3 p-2 rounded-lg transition-all duration-200
+                  absolute bottom-3 right-3 px-2 py-2.5 rounded-lg transition-all duration-200
                   ${inputValue.trim() && !isLoading
                     ? 'bg-accent hover:bg-accent/90 text-white hover:scale-105'
                     : 'bg-secondary/50 text-text-secondary cursor-not-allowed'

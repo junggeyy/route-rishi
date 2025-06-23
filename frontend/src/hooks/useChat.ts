@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { chatApi } from '../services/api';
-import type { Message, Conversation, AgentThought } from '../types';
+import type { Message, Conversation, AgentThought, ToolCall } from '../types';
 
 export interface UseChatReturn {
   // State
@@ -13,7 +13,7 @@ export interface UseChatReturn {
   agentThoughts: AgentThought[];
   
   // Actions
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, withReasoning?: boolean) => Promise<void>;
   createNewConversation: () => string;
   selectConversation: (conversationId: string) => void;
   deleteConversation: (conversationId: string) => void;
@@ -136,42 +136,8 @@ export const useChat = (): UseChatReturn => {
     return newMessage;
   }, []);
 
-  // Simulate agent thinking process
-  const simulateAgentThinking = useCallback(async (userMessage: string) => {
-    setIsAgentThinking(true);
-    setAgentThoughts([]);
-
-    // Simulate different thinking steps based on message content
-    const lowerMessage = userMessage.toLowerCase();
-    const thoughts: AgentThought[] = [];
-
-    // Simulate getting current date
-    thoughts.push({
-      id: `thought_${Date.now()}_1`,
-      action: 'get_current_date',
-      input: {},
-      output: `Today is ${new Date().toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      })}`,
-      timestamp: new Date(),
-    });
-
-    // Add thought for each step
-    for (let i = 0; i < thoughts.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
-      setAgentThoughts(prev => [...prev, thoughts[i]]);
-    }
-
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setIsAgentThinking(false);
-  }, []);
-
-  // Send a message
-  const sendMessage = useCallback(async (content: string) => {
+  // Send a message with optional reasoning
+  const sendMessage = useCallback(async (content: string, withReasoning: boolean = false) => {
     if (!content.trim()) return;
     
     setIsLoading(true);
@@ -192,18 +158,29 @@ export const useChat = (): UseChatReturn => {
         conversationId,
       });
 
-      // Simulate agent thinking
-      await simulateAgentThinking(content);
+      if (withReasoning) {
+        // Get AI response with reasoning from backend
+        const { response, toolCalls, executionTimeMs } = await chatApi.sendMessageWithReasoning(content, conversationId);
 
-      // Get AI response (using mock for now)
-      const aiResponse = await chatApi.sendMessageMock(content, conversationId);
+        // Add AI response with reasoning data
+        addMessage({
+          content: response,
+          type: 'ai',
+          conversationId,
+          toolCalls,
+          executionTimeMs,
+        });
+      } else {
+        // Get regular AI response from backend
+        const aiResponse = await chatApi.sendMessage(content, conversationId);
 
-      // Add AI response
-      addMessage({
-        content: aiResponse,
-        type: 'ai',
-        conversationId,
-      });
+        // Add AI response
+        addMessage({
+          content: aiResponse,
+          type: 'ai',
+          conversationId,
+        });
+      }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
@@ -213,7 +190,7 @@ export const useChat = (): UseChatReturn => {
       setIsLoading(false);
       setAgentThoughts([]);
     }
-  }, [currentConversationId, createNewConversation, addMessage, simulateAgentThinking]);
+  }, [currentConversationId, createNewConversation, addMessage]);
 
   // Retry the last message
   const retryLastMessage = useCallback(async () => {

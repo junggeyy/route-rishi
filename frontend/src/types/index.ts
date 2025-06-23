@@ -5,6 +5,16 @@ export interface Message {
   type: 'user' | 'ai';
   timestamp: Date;
   conversationId: string;
+  toolCalls?: ToolCall[];
+  executionTimeMs?: number;
+}
+
+export interface ToolCall {
+  tool_name: string;
+  input_params: Record<string, any>;
+  output: string;
+  status: 'running' | 'completed' | 'error';
+  execution_time_ms?: number;
 }
 
 export interface AgentThought {

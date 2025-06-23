@@ -1,18 +1,10 @@
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
 from app.agent.travel_agent import travel_agent
+from app.schemas.chat_schemas import ChatRequest, ChatResponse, ChatResponseWithReasoning
 import logging
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-class ChatRequest(BaseModel):
-    message: str
-    conversation_id: str
-
-class ChatResponse(BaseModel):
-    response: str
-    conversation_id: str
 
 @router.post("/chat/message", response_model=ChatResponse)
 async def send_message(request: ChatRequest):
@@ -48,6 +40,39 @@ async def send_message(request: ChatRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process message. Please try again."
+        )
+
+@router.post("/chat/message-with-reasoning", response_model=ChatResponseWithReasoning)
+async def send_message_with_reasoning(request: ChatRequest):
+    """
+    Send a message to the RouteRishi AI agent and get a response with reasoning steps.
+    """
+    try:
+        if not request.message.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Message cannot be empty"
+            )
+        
+        if not request.conversation_id.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Conversation ID cannot be empty"
+            )
+        
+        # Use the new reasoning method
+        response_data = await travel_agent.run_query_with_reasoning(
+            user_query=request.message,
+            conversation_id=request.conversation_id
+        )
+        
+        return ChatResponseWithReasoning(**response_data)
+        
+    except Exception as e:
+        logger.error(f"Error in chat reasoning endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process message with reasoning. Please try again."
         )
 
 @router.get("/chat/health")

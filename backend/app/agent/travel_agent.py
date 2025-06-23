@@ -5,10 +5,12 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 
 from typing import List, Any, Dict, Optional
 import logging
+import time
 
 from app.agent.tool_definitions import all_tools
 from app.core.config import settings
 from app.agent.prompts import get_full_system_prompt
+from app.schemas.chat_schemas import ToolCall
 
 # setup logging
 logging.basicConfig(level=logging.INFO)
@@ -133,6 +135,92 @@ class TravelAgent:
                 "status": "unhealthy",
                 "error": str(e),
                 "tools_count": len(self.tools)
+            }
+
+    def _extract_tool_calls_from_steps(self, intermediate_steps: List[tuple]) -> List[ToolCall]:
+        """
+        Extract tool calls from LangChain's intermediate steps.
+        Args:
+            intermediate_steps: List of (AgentAction, observation) tuples
+        Returns:
+            List[ToolCall]: Structured tool call information
+        """
+        tool_calls = []
+        
+        for step in intermediate_steps:
+            agent_action, observation = step
+            
+            # Map tool names to friendly display names
+            tool_name_mapping = {
+                "get_weather_forecast": "Weather Forecast",
+                "get_exchange_rate": "Currency Exchange", 
+                "search_flight_offers": "Flight Search",
+                "find_hotels_with_offers": "Hotel Search",
+                "get_current_date": "Current Date"
+            }
+            
+            tool_call = ToolCall(
+                tool_name=tool_name_mapping.get(agent_action.tool, agent_action.tool),
+                input_params=agent_action.tool_input,
+                output=str(observation),
+                status="completed"
+            )
+            tool_calls.append(tool_call)
+            
+        return tool_calls
+
+    async def run_query_with_reasoning(
+        self,
+        user_query: str,
+        conversation_id: str   
+    ) -> Dict[str, Any]:
+        """
+        Runs a user query through the AI agent with reasoning information.
+        Args:
+            user_query (str): The user's input query.
+            conversation_id (str): Unique conversation id.
+        Returns:
+            Dict[str, Any]: Response with reasoning data including tool calls
+        """
+        # gets the history for this conversation, or creates a new one if it's the first message.
+        chat_history = self.conversations.setdefault(conversation_id, ChatMessageHistory())
+        
+        start_time = time.time()
+        
+        try:
+            response = await self.agent_executor.ainvoke({
+                "input": user_query,  
+                "chat_history": chat_history.messages
+            })
+            
+            end_time = time.time()
+            execution_time_ms = int((end_time - start_time) * 1000)
+            
+            # Extract tool calls from intermediate steps
+            tool_calls = self._extract_tool_calls_from_steps(
+                response.get("intermediate_steps", [])
+            )
+            
+            # update the history with the latest exchange.
+            chat_history.add_user_message(user_query)
+            chat_history.add_ai_message(response["output"])
+            
+            return {
+                "response": response["output"],
+                "conversation_id": conversation_id,
+                "tool_calls": tool_calls,
+                "total_execution_time_ms": execution_time_ms,
+                "reasoning_enabled": True
+            }
+
+        except Exception as e:
+            logger.error(f"\nError in run_query_with_reasoning: {str(e)}")
+            return {
+                "response": f"I encountered an error while processing your request. Please try rephrasing your question or ask something else.",
+                "conversation_id": conversation_id,
+                "tool_calls": [],
+                "total_execution_time_ms": 0,
+                "reasoning_enabled": True
             }
 
 travel_agent = TravelAgent()

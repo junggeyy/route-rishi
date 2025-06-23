@@ -11,12 +11,12 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const chat = useChat();
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, withReasoning?: boolean) => {
     // Close sidebar on mobile when sending message
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
-    await chat.sendMessage(message);
+    await chat.sendMessage(message, withReasoning);
   };
 
   const toggleSidebar = () => {
