@@ -12,5 +12,6 @@ class Settings(BaseSettings):
     AMADEUS_API_KEY: str
     AMADEUS_API_SECRET: str
     GEMINI_API_KEY: str
+    FIREBASE_SERVICE_ACCOUNT_KEY: str
     
 settings = Settings()

@@ -10,3 +10,6 @@ amadeus_response.json
 .vscode/
 .idea/
 .DS_Store
+
+# firebase
+backend/config/serviceAccountKey.json
