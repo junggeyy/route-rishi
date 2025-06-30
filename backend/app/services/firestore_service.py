@@ -1,24 +1,31 @@
-from google.cloud import firestore
 from google.cloud.firestore_v1 import FieldFilter
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
 import uuid
 import logging
+import firebase_admin
+from firebase_admin import firestore
 
-from app.schemas.chat_schemas import ChatMessage, ToolCall
+from app.schemas.chat_schemas import ChatMessage
 from app.schemas.conversation_schemas import Conversation, ConversationMetadata
-from app.schemas.user_schemas import UserProfile
+from app.schemas.user_schemas import UserProfile, SavedItineraryDocument
 
 logger = logging.getLogger(__name__)
 
 class FirestoreService:
     def __init__(self):
-        """Initialize Firestore client"""
+        """Initialize Firestore client using existing Firebase app"""
         try:
-            self.db = firestore.Client()
-            logger.info("Firestore client initialized successfully!")
+            # Ensure Firebase is initialized 
+            if not firebase_admin._apps:
+                logger.info("Firebase not initialized, initializing via FirebaseService...")
+                from app.services.firebase_service import FirebaseService
+                FirebaseService() 
+            
+            self.db = firestore.client()
+            logger.info("Firestore client initialized successfully using Firebase Admin SDK!")
         except Exception as e:
-            logger.error(f"Failed to initialized Firestore client: {e}")
+            logger.error(f"Failed to initialize Firestore client: {e}")
             raise
 
     ### Conversation methods
@@ -252,6 +259,58 @@ class FirestoreService:
         except Exception as e:
             logger.error(f"Failed to update user profile {user_id}: {e}")
             return False
+
+    ### Itinerary methods
+
+    async def save_user_itinerary(self, user_id: str, itinerary_doc: SavedItineraryDocument) -> bool:
+        """Add a saved itinerary to user's profile"""
+        try:
+            doc_ref = self.db.collection('users').document(user_id)
+            doc_ref.update({
+                'saved_itineraries': firestore.ArrayUnion([itinerary_doc.model_dump()]),
+                'updated_at': datetime.now(timezone.utc)
+            })
+            logger.info(f"Saved itinerary {itinerary_doc.id} for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save itinerary for user {user_id}: {e}")
+            return False
+
+    async def get_user_itineraries(self, user_id: str) -> List[SavedItineraryDocument]:
+        """Get all saved itineraries for a user"""
+        try:
+            user_profile = await self.get_user_profile(user_id)
+            if user_profile and user_profile.saved_itineraries:
+                return user_profile.saved_itineraries
+            return []
+        except Exception as e:
+            logger.error(f"Failed to get itineraries for user {user_id}: {e}")
+            return []
+
+    async def delete_user_itinerary(self, user_id: str, itinerary_id: str) -> bool:
+        """Remove a saved itinerary from user's profile"""
+        try:
+            user_profile = await self.get_user_profile(user_id)
+            if not user_profile:
+                return False
+            
+            # Find and remove the itinerary
+            updated_itineraries = [
+                itin for itin in user_profile.saved_itineraries 
+                if itin.id != itinerary_id
+            ]
+            
+            doc_ref = self.db.collection('users').document(user_id)
+            doc_ref.update({
+                'saved_itineraries': [itin.model_dump() for itin in updated_itineraries],
+                'updated_at': datetime.now(timezone.utc)
+            })
+            
+            logger.info(f"Deleted itinerary {itinerary_id} for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete itinerary {itinerary_id} for user {user_id}: {e}")
+            return False
         
     ### Utility methods
     async def conversation_exists(self, conversation_id: str) -> bool:
@@ -307,7 +366,7 @@ class FirestoreService:
             logger.error(f"Failed to cleanup anonymous conversations: {e}")
             return 0
         
-# ==================== DEPENDENCY INJECTION ====================
+### Dependency injection
 
 # Singleton instance
 _firestore_service = None

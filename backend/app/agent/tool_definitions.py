@@ -7,7 +7,7 @@ from app.services.weather_service import weather_service
 from app.services.currency_service import currency_service
 from app.services.flight_service import flight_service
 from app.services.hotel_service import hotel_service
-
+from app.services.itinerary_service import get_itinerary_service
 from app.schemas.flight_schemas import FlightSearchRequest
 
 # --- Date Tool ---
@@ -109,5 +109,28 @@ hotel_tool = StructuredTool.from_function(
     verbose=True
 )
 
+class CreateItineraryPDFInput(BaseModel):
+    trip_summary: str = Field(description="Complete trip overview text summarizing the entire itinerary")
+    user_name: str = Field(description="Name of the traveler for personalizing the PDF")
+    destination: str = Field(description="Main destination city/country for the trip (e.g., 'Paris, France')")
+    start_date: date = Field(description="Trip start date in YYYY-MM-DD format")
+    end_date: date = Field(description="Trip end date in YYYY-MM-DD format")
+    flights: List[dict] = Field(description="List of selected flight offers with details (price, route, times)")
+    hotels: List[dict] = Field(description="List of selected hotel offers with details (name, price, dates)")
+    daily_plans: List[dict] = Field(description="Day-by-day activity plans with activities, times, and weather info")
+    user_id: Optional[str] = Field(None, description="User ID for saving to profile (optional for guest users)")
+
+def _create_itinerary_pdf_wrapper(**kwargs):
+    """Wrapper function for lazy initialization of itinerary service"""
+    return get_itinerary_service().create_and_save_complete_itinerary(**kwargs)
+
+create_itinerary_pdf_tool = StructuredTool.from_function(
+    func=_create_itinerary_pdf_wrapper,
+    name="create_itinerary_pdf",
+    description="Create a beautiful PDF itinerary document after user confirms their complete travel plan. Use this only after the user has confirmed all flight, hotel, and activity selections and wants to save their complete itinerary. For authenticated users, this will also save the itinerary to their profile.",
+    args_schema=CreateItineraryPDFInput,
+    verbose=True
+)
+
 # Combine all tools
-all_tools = [weather_tool, currency_tool, flight_tool, hotel_tool, date_tool]
+all_tools = [weather_tool, currency_tool, flight_tool, hotel_tool, date_tool, create_itinerary_pdf_tool]

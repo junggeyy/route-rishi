@@ -20,26 +20,29 @@ class FirebaseService:
     def _initialize(self):
         """Initialize Firebase Admin SDK"""
         try:
-            # loading the Firebase service account key
             service_account_key = settings.FIREBASE_SERVICE_ACCOUNT_KEY
+            if not service_account_key:
+                raise ValueError("FIREBASE_SERVICE_ACCOUNT_KEY not found in environment variables")
+            
+            service_account_info = json.loads(service_account_key)
+            cred = credentials.Certificate(service_account_info)
 
-            if service_account_key:
-                service_account_info = json.loads(service_account_key)
-                cred = credentials.Certificate(service_account_key)
-            else:
-                raise ValueError("Firebase service account credentials not found")
-
-            # initliazing the app if not initialized
+            # initializing the app if not initialized
             if not firebase_admin._apps:
-                self._app = firebase_admin.initialize_app(cred)
+                self._app = firebase_admin.initialize_app(cred, {
+                    'storageBucket': 'routerishi.appspot.com'  # Include storage bucket for PDF service
+                })
+                logger.info("Firebase initialized successfully from .env credentials")
             else:
                 self._app = firebase_admin.get_app()
+                logger.info("Using existing Firebase app instance")
 
-            # initliazing the Firestore db
+            # initializing the Firestore db
             self._db = firestore.client()
 
-            logger.info("Firebase initliazed successfully")
-
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Firebase credentials JSON: {e}")
+            raise ValueError("Invalid JSON format in FIREBASE_SERVICE_ACCOUNT_KEY")
         except Exception as e:
             logger.error(f"Failed to initialize Firebase: {str(e)}")
             raise
