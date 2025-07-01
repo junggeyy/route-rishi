@@ -16,10 +16,11 @@ interface SidebarProps {
   conversations: Conversation[];
   currentConversationId: string | null;
   onSelectConversation: (conversationId: string) => void;
-  onNewConversation: () => void;
-  onDeleteConversation: (conversationId: string) => void;
+  onNewConversation?: () => void;
+  onDeleteConversation?: (conversationId: string) => void;
   onCloseSidebar: () => void;
   collapsed?: boolean;
+  isGuest?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -30,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteConversation,
   onCloseSidebar,
   collapsed = false,
+  isGuest = false,
 }) => {
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -78,18 +80,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         
         {/* New Chat Button */}
-        <button
-          onClick={onNewConversation}
-          className={`w-full mt-4 flex items-center justify-center transition-all duration-200 ${
-            collapsed 
-              ? 'p-3 bg-accent/80 hover:bg-accent text-white rounded-lg hover:scale-105' 
-              : 'button-primary space-x-2'
-          }`}
-          title={collapsed ? "New Chat" : ""}
-        >
-          <Plus className={collapsed ? "w-6 h-6" : "w-5 h-5"} />
-          {!collapsed && <span>New Chat</span>}
-        </button>
+        {onNewConversation && (
+          <button
+            onClick={onNewConversation}
+            disabled={isGuest}
+            className={`w-full mt-4 flex items-center justify-center transition-all duration-200 ${
+              isGuest 
+                ? 'bg-secondary/50 text-text-secondary cursor-not-allowed' 
+                : collapsed 
+                  ? 'p-3 bg-accent/80 hover:bg-accent text-white rounded-lg hover:scale-105' 
+                  : 'button-primary space-x-2'
+            }`}
+            title={isGuest ? "Sign up to create new chats" : collapsed ? "New Chat" : ""}
+          >
+            <Plus className={collapsed ? "w-6 h-6" : "w-5 h-5"} />
+            {!collapsed && <span>{isGuest ? "New Chat (Sign up required)" : "New Chat"}</span>}
+          </button>
+        )}
       </div>
 
       {/* Conversations List */}
@@ -150,12 +157,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     </div>
                     
-                    <button
-                      onClick={(e) => handleDeleteConversation(e, conversation.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-danger/20 rounded transition-all duration-200"
-                    >
-                      <Trash2 className="w-4 h-4 text-danger" />
-                    </button>
+                    {onDeleteConversation && !isGuest && (
+                      <button
+                        onClick={(e) => handleDeleteConversation(e, conversation.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-danger/20 rounded transition-all duration-200"
+                      >
+                        <Trash2 className="w-4 h-4 text-danger" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
