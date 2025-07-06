@@ -13,5 +13,11 @@ class Settings(BaseSettings):
     AMADEUS_API_SECRET: str
     GEMINI_API_KEY: str
     FIREBASE_SERVICE_ACCOUNT_KEY: str
+    FIREBASE_WEB_API_KEY: str  
+
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
 settings = Settings()

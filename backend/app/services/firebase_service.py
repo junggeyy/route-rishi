@@ -3,7 +3,7 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from typing import Optional, Dict, Any
 from app.core.config import settings
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -90,8 +90,8 @@ class FirebaseService:
                 'uid': uid,
                 'email': user_data.get('email'),
                 'display_name': user_data.get('display_name'),
-                'created_at': datetime.now(datetime.timezone.utc),
-                'updated_at': datetime.now(datetime.timezone.utc)
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc)
             }
 
             user_ref.set(profile_data, merge=True)
@@ -121,7 +121,7 @@ class FirebaseService:
         try:
             user_ref = self._db.collection('users').document(uid)
             
-            update_data['updated_at'] = datetime.now(datetime.timezone.utc)
+            update_data['updated_at'] = datetime.now(timezone.utc)
             
             user_ref.update(update_data)
             logger.info(f"User profile updated for uid: {uid}")
@@ -147,7 +147,7 @@ class FirebaseService:
             )
 
             conversation_data.update({
-                'updated_at': datetime.now(datetime.timezone.utc),
+                'updated_at': datetime.now(timezone.utc),
                 'user_id': uid
             })
 
