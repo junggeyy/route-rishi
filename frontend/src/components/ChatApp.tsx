@@ -5,14 +5,16 @@ import { Sidebar } from './Sidebar';
 import { ChatInterface } from './ChatInterface';
 import { WelcomeScreen } from './WelcomeScreen';
 import { GuestLimitModal } from './GuestLimitModal';
+import { SavedItinerariesModal } from './SavedItinerariesModal';
 import { useChat } from '../hooks/useChat';
-import { Menu, PanelLeftClose, PanelLeftOpen, LogOut, User, AlertTriangle } from 'lucide-react';
+import { Menu, PanelLeftClose, PanelLeftOpen, LogOut, User, AlertTriangle, Bookmark } from 'lucide-react';
 import icon from '../assets/icon.svg';
 
 export const ChatApp = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true); // Default open on desktop
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showSavedItineraries, setShowSavedItineraries] = useState(false);
   const chat = useChat();
   const { user, logout, isGuest } = useAuth();
   const guestLimits = useGuestLimits();
@@ -105,17 +107,9 @@ export const ChatApp = () => {
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center space-x-2 p-2 rounded-lg hover:bg-secondary/60 transition-colors"
             >
-              {user?.photoURL ? (
-                <img 
-                  src={user.photoURL} 
-                  alt={user.fullName}
-                  className="w-8 h-8 rounded-full"
-                />
-              ) : (
-                <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-accent" />
-                </div>
-              )}
+              <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-accent" />
+              </div>
                              <div className="hidden sm:block text-left">
                  <p className="text-text-primary text-sm font-medium">{user?.fullName}</p>
                  {isGuest && (
@@ -133,16 +127,28 @@ export const ChatApp = () => {
 
             {/* User dropdown menu */}
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-48 glass-card rounded-lg shadow-lg py-2 z-50">
+              <div className="absolute right-0 mt-2 w-56 glass-card rounded-lg shadow-lg py-2 z-50">
                 <div className="px-4 py-2 border-b border-border/50">
-                  <p className="text-text-primary font-medium">{user?.fullName}</p>
-                  <p className="text-text-secondary text-sm">{user?.email}</p>
+                  <p className="text-text-primary font-medium truncate">{user?.fullName}</p>
+                  <p className="text-text-secondary text-sm truncate">{user?.email}</p>
                   {isGuest && (
                     <span className="inline-block mt-1 px-2 py-1 bg-warning/20 text-warning text-xs rounded">
                       Guest Mode
                     </span>
                   )}
                 </div>
+                {!isGuest && (
+                  <button
+                    onClick={() => {
+                      setShowSavedItineraries(true);
+                      setShowUserMenu(false);
+                    }}
+                    className="flex items-center space-x-2 w-full px-4 py-2 text-text-primary hover:bg-secondary/60 transition-colors"
+                  >
+                    <Bookmark className="w-4 h-4" />
+                    <span>Saved Itineraries</span>
+                  </button>
+                )}
                 <button
                   onClick={handleLogout}
                   className="flex items-center space-x-2 w-full px-4 py-2 text-text-primary hover:bg-secondary/60 transition-colors"
@@ -207,6 +213,12 @@ export const ChatApp = () => {
         isOpen={guestLimits.showLimitWarning}
         onClose={guestLimits.dismissWarning}
         messageLimit={guestLimits.messageLimit}
+      />
+
+      {/* Saved Itineraries Modal */}
+      <SavedItinerariesModal
+        isOpen={showSavedItineraries}
+        onClose={() => setShowSavedItineraries(false)}
       />
     </div>
   );

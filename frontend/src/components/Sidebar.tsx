@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Plus, 
   MessageSquare, 
@@ -7,10 +7,12 @@ import {
   Settings, 
   X,
   Clock,
-  Sparkles
+  Sparkles,
+  LogOut
 } from 'lucide-react';
 import icon from '../assets/icon.svg';
 import type { Conversation } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -33,6 +35,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   collapsed = false,
   isGuest = false,
 }) => {
+  const [showSettings, setShowSettings] = useState(false);
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowSettings(false);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
   const formatDate = (date: Date) => {
     const now = new Date();
     const diffInHours = Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60);
@@ -175,17 +188,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer */}
       <div className="p-4 border-t border-border/50">
-        {/* User Profile Placeholder */}
+        {/* User Profile */}
         {!collapsed && (
-          <div className="flex items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors cursor-pointer space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-accent to-travel-blue rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
+          <div className="relative">
+            <div 
+              className="flex items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors cursor-pointer space-x-3"
+              onClick={() => setShowSettings(!showSettings)}
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-accent to-travel-blue rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-text-primary truncate">
+                  {user?.fullName || 'Guest User'}
+                </p>
+                {isGuest && (
+                  <p className="text-xs text-text-secondary">Guest Mode</p>
+                )}
+              </div>
+              <Settings className="w-4 h-4 text-text-secondary" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary">Guest User</p>
-              <p className="text-xs text-text-secondary">Ready to explore</p>
-            </div>
-            <Settings className="w-4 h-4 text-text-secondary" />
+            
+            {/* Settings Dropdown */}
+            {showSettings && (
+              <div className="absolute bottom-full mb-2 left-0 right-0 bg-secondary/90 backdrop-blur-xl rounded-lg shadow-lg py-2 z-50">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2 w-full px-3 py-2 text-text-primary hover:bg-secondary/60 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
         
@@ -198,6 +233,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
       </div>
+      
+      {/* Click outside to close settings menu */}
+      {showSettings && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowSettings(false)} 
+        />
+      )}
     </div>
   );
 }; 

@@ -205,6 +205,18 @@ export interface ExchangeRate {
   last_updated: string;
 }
 
+// Itinerary Types
+export interface SavedItinerary {
+  id: string;
+  title: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  pdf_url: string;
+  created_at: string;
+  file_size_mb: number;
+}
+
 // Message Template Types
 export interface MessageTemplate {
   id: string;

@@ -9,6 +9,7 @@ import type {
   ApiResponse,
   Message,
   ToolCall,
+  SavedItinerary,
 } from '../types';
 
 // Create axios instance with base configuration
@@ -210,6 +211,49 @@ I can help you with:
 - 🗺️ Complete trip planning
 
 What would you like to explore today? Just tell me about your travel plans and I'll get started! 😊`;
+  },
+};
+
+// Itinerary API
+export const itineraryApi = {
+  getSavedItineraries: async (token: string): Promise<SavedItinerary[]> => {
+    try {
+      const response = await api.get('/itinerary/saved', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Get saved itineraries error:', error);
+      throw new Error('Failed to get saved itineraries');
+    }
+  },
+
+  deleteSavedItinerary: async (token: string, itineraryId: string): Promise<void> => {
+    try {
+      await api.delete(`/itinerary/saved/${itineraryId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error('Delete saved itinerary error:', error);
+      throw new Error('Failed to delete saved itinerary');
+    }
+  },
+
+  deleteAllSavedItineraries: async (token: string): Promise<void> => {
+    try {
+      await api.delete('/itinerary/saved', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error('Delete all saved itineraries error:', error);
+      throw new Error('Failed to delete all saved itineraries');
+    }
   },
 };
 
