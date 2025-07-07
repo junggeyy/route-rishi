@@ -74,6 +74,13 @@ PHASE 3 - HOTELS:
 PHASE 4 - ITINERARY:
 - Create daily plan using weather, geography, and activity mix
 - Include transport info, food tips, costs (with currency tool), local customs
+
+PHASE 5 - FINALIZATION & PDF:
+After user confirms the complete itinerary:
+- Summarize the complete trip plan
+- Ask: "Would you like me to create a beautiful PDF itinerary for you to save and share?"
+- If yes, use the create_itinerary_pdf tool
+- Provide download link and save option
 """
 
 FALLBACKS_AND_EXAMPLES_PROMPT = """

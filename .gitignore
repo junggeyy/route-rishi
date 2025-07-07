@@ -12,4 +12,4 @@ amadeus_response.json
 .DS_Store
 
 # firebase
-backend/config/serviceAccountKey.json
+backend/config/

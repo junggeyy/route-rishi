@@ -11,9 +11,15 @@ import icon from '../assets/icon.svg';
 
 interface WelcomeScreenProps {
   onSendMessage: (message: string, withReasoning?: boolean) => void;
+  isGuest?: boolean;
+  remainingMessages?: number | null;
 }
 
-export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSendMessage }) => {
+export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ 
+  onSendMessage, 
+  isGuest = false, 
+  remainingMessages = null 
+}) => {
   const [inputValue, setInputValue] = useState('');
   const [reasoningEnabled, setReasoningEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +65,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSendMessage }) =
             <p className="text-lg text-text-secondary">
               Smarter Trips. Zero Hassle.
             </p>
+            {isGuest && remainingMessages !== null && (
+              <div className="inline-flex items-center space-x-2 bg-warning/10 text-warning px-3 py-2 rounded-lg border border-warning/20">
+                <span className="text-sm">
+                  Guest Mode: {remainingMessages} messages remaining
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

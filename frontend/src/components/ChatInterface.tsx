@@ -22,6 +22,9 @@ interface ChatInterfaceProps {
   onSendMessage: (message: string, withReasoning?: boolean) => void;
   onRetry: () => void;
   onClearError: () => void;
+  isGuest?: boolean;
+  hasReachedLimit?: boolean;
+  remainingMessages?: number | null;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -33,6 +36,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
   onRetry,
   onClearError,
+  isGuest = false,
+  hasReachedLimit = false,
+  remainingMessages = null,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [reasoningEnabled, setReasoningEnabled] = useState(true);
@@ -54,7 +60,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputValue.trim() && !isLoading) {
+    if (inputValue.trim() && !isLoading && !hasReachedLimit) {
       onSendMessage(inputValue.trim(), reasoningEnabled);
       setInputValue('');
     }
@@ -229,22 +235,42 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Input Area */}
       <div className="border-t border-border/50 p-4">
         <div className="max-w-3xl mx-auto">
+          {/* Guest Warning */}
+          {isGuest && remainingMessages !== null && (
+            <div className="mb-3 text-center">
+              <div className={`inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm ${
+                remainingMessages > 0 
+                  ? 'bg-warning/10 text-warning border border-warning/20' 
+                  : 'bg-danger/10 text-danger border border-danger/20'
+              }`}>
+                <span>
+                  {remainingMessages > 0 
+                    ? `${remainingMessages} messages remaining in guest mode` 
+                    : 'Guest message limit reached'
+                  }
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Reasoning Toggle */}
-          <div className="flex items-center justify-center mb-3">
-            <button
-              onClick={() => setReasoningEnabled(!reasoningEnabled)}
-              className={`
-                flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs transition-all duration-200
-                ${reasoningEnabled 
-                  ? 'bg-accent/20 text-accent border border-accent/30' 
-                  : 'bg-secondary/30 text-text-secondary border border-secondary/50'
-                }
-              `}
-            >
-              <Brain className="w-3 h-3" />
-              <span>{reasoningEnabled ? 'Reasoning ON' : 'Reasoning OFF'}</span>
-            </button>
-          </div>
+          {!hasReachedLimit && (
+            <div className="flex items-center justify-center mb-3">
+              <button
+                onClick={() => setReasoningEnabled(!reasoningEnabled)}
+                className={`
+                  flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs transition-all duration-200
+                  ${reasoningEnabled 
+                    ? 'bg-accent/20 text-accent border border-accent/30' 
+                    : 'bg-secondary/30 text-text-secondary border border-secondary/50'
+                  }
+                `}
+              >
+                <Brain className="w-3 h-3" />
+                <span>{reasoningEnabled ? 'Reasoning ON' : 'Reasoning OFF'}</span>
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="flex items-center space-x-3">
             <div className="flex-1">
@@ -253,18 +279,21 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask me anything about your travel plans..."
+                placeholder={hasReachedLimit 
+                  ? "Please sign up to continue chatting..." 
+                  : "Ask me anything about your travel plans..."
+                }
                 className="input-field w-full resize-none min-h-[44px] max-h-32"
                 rows={1}
-                disabled={isLoading}
+                disabled={isLoading || hasReachedLimit}
               />
             </div>
             <button
               type="submit"
-              disabled={!inputValue.trim() || isLoading}
+              disabled={!inputValue.trim() || isLoading || hasReachedLimit}
               className={`
                 p-3 rounded-lg transition-all duration-200 flex-shrink-0
-                ${inputValue.trim() && !isLoading
+                ${inputValue.trim() && !isLoading && !hasReachedLimit
                   ? 'bg-accent hover:bg-accent/90 text-white hover:scale-105'
                   : 'bg-secondary/50 text-text-secondary cursor-not-allowed'
                 }

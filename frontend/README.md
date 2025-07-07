@@ -234,3 +234,206 @@ This project is part of the RouteRishi travel planning platform.
 ---
 
 **RouteRishi Frontend v1.0** - Built with ❤️ for modern travel planning
+
+## Authentication
+- **Email/Password Login & Signup** - Secure user authentication
+- **Google OAuth Integration** - Quick signup/login with Google (requires backend setup)
+- **Guest Mode** - Try the app with limited functionality (5 messages)
+- **Protected Routes** - Automatic redirection for authenticated/unauthenticated users
+
+### Guest Mode Limitations
+- Limited to 5 messages per session
+- Cannot create new conversations
+- Cannot delete conversations
+- Chat history not persisted
+- No access to premium features
+
+### User Interface
+- **Glass Morphism Design** - Modern, translucent UI elements
+- **Dark Theme** - Optimized for comfortable viewing
+- **Responsive Layout** - Works seamlessly on desktop and mobile
+- **Real-time Chat** - Smooth messaging experience with typing indicators
+- **Sidebar Navigation** - Easy access to conversation history and settings
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+ and npm
+- Backend API running (see backend documentation)
+
+### Installation
+
+1. **Clone and navigate to frontend**
+   ```bash
+   cd frontend
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Environment Setup**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Update `.env` with your configuration:
+   ```env
+   VITE_API_URL=http://localhost:8000
+   ```
+
+4. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open in browser**
+   ```
+   http://localhost:5173
+   ```
+
+## Authentication Flow
+
+### For New Users
+1. Visit `/signup` to create an account
+2. Fill in full name, email, and password
+3. Alternatively, click "Sign up with Google"
+4. Or select "Continue as Guest" for limited access
+
+### For Existing Users
+1. Visit `/login` to sign in
+2. Enter email and password
+3. Or use "Continue with Google"
+4. Or select "Continue as Guest"
+
+### Guest Mode
+- Perfect for trying out the app
+- No registration required
+- 5 message limit per session
+- Upgrade prompt after limit reached
+
+## Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+
+## Project Structure
+
+```
+src/
+├── components/          # React components
+│   ├── ChatApp.tsx     # Main chat interface
+│   ├── ChatInterface.tsx # Chat message area
+│   ├── Sidebar.tsx     # Conversation sidebar
+│   ├── LoginPage.tsx   # Authentication pages
+│   ├── SignupPage.tsx
+│   ├── ProtectedRoute.tsx
+│   └── GuestLimitModal.tsx
+├── contexts/           # React contexts
+│   └── AuthContext.tsx # Authentication state management
+├── hooks/              # Custom React hooks
+│   ├── useAuth.ts      # Authentication hook
+│   ├── useChat.ts      # Chat functionality
+│   └── useGuestLimits.ts # Guest limitations
+├── services/           # API and external services
+│   ├── authService.ts  # Authentication API calls
+│   └── api.ts          # Main API service
+├── types/              # TypeScript type definitions
+│   ├── index.ts        # General types
+│   └── auth.ts         # Authentication types
+└── assets/             # Static assets
+```
+
+## Key Components
+
+### Authentication Components
+- **LoginPage** - Email/password and social login
+- **SignupPage** - User registration with validation
+- **ProtectedRoute** - Route protection wrapper
+- **AuthContext** - Global authentication state
+
+### Chat Components
+- **ChatApp** - Main application container
+- **ChatInterface** - Message display and input
+- **Sidebar** - Conversation management
+- **WelcomeScreen** - First-time user experience
+
+### Guest Limitations
+- **useGuestLimits** - Hook for managing guest restrictions
+- **GuestLimitModal** - Upgrade prompt when limit reached
+
+## Styling
+
+The app uses:
+- **Tailwind CSS** - Utility-first CSS framework
+- **Custom Design System** - Consistent colors and components
+- **Glass Morphism** - Modern translucent effects
+- **Responsive Design** - Mobile-first approach
+
+## API Integration
+
+The frontend communicates with the backend API for:
+- User authentication (login, signup, logout)
+- Chat message processing
+- Conversation management
+- Real-time features
+
+## Development Notes
+
+### Adding New Features
+1. Create components in appropriate directories
+2. Add TypeScript types in `types/`
+3. Update routing in `App.tsx` if needed
+4. Add any new API calls to services
+
+### State Management
+- Authentication state managed by AuthContext
+- Chat state managed by useChat hook
+- Guest limitations managed by useGuestLimits hook
+
+### Protected Routes
+All chat functionality requires authentication. Guest users have limited access with clear upgrade paths to full accounts.
+
+## Deployment
+
+Build the application:
+```bash
+npm run build
+```
+
+The `dist/` folder contains the production build ready for deployment to any static hosting service.
+
+## Environment Variables
+
+Required variables in `.env`:
+- `VITE_API_URL` - Backend API base URL
+
+Optional (for future Google OAuth):
+- `VITE_FIREBASE_*` - Firebase configuration
+
+## Troubleshooting
+
+### Common Issues
+
+1. **API Connection Failed**
+   - Check `VITE_API_URL` in `.env`
+   - Ensure backend is running
+   - Check CORS configuration
+
+2. **Authentication Not Working**
+   - Verify backend auth endpoints
+   - Check localStorage for tokens
+   - Clear browser storage if needed
+
+3. **Guest Mode Issues**
+   - Check localStorage for guest data
+   - Clear guest data: `localStorage.clear()`
+
+### Browser Support
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
