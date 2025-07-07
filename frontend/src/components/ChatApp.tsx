@@ -50,7 +50,8 @@ export const ChatApp = () => {
     }
   };
 
-  const showWelcome = !chat.currentConversation || chat.messages.length === 0;
+  // Show welcome screen when there are no messages, regardless of whether a conversation ID exists
+  const showWelcome = chat.messages.length === 0;
 
   return (
     <div className="h-screen bg-primary flex overflow-hidden">

@@ -4,10 +4,26 @@ import { conversationApi, chatApi, API_BASE_URL } from '../services/api';
 import { authService } from '../services/authService';
 import type { ConversationMetadata, Message, AgentThought } from '../types';
 
+// Add draft conversation type
+interface DraftConversation {
+  id: string;
+  isDraft: true;
+  created_at: string;
+  title: string;  // Add title for consistency
+  message_count: number;  // Add message_count for consistency
+  updated_at: string;  // Add updated_at for consistency
+  is_guest: boolean;  // Add is_guest for type compatibility
+}
+
+// Helper type guard
+function isDraft(conversation: DraftConversation | ConversationMetadata): conversation is DraftConversation {
+  return 'isDraft' in conversation;
+}
+
 export interface UseChatReturn {
   // State
-  conversations: ConversationMetadata[];
-  currentConversation: ConversationMetadata | null;
+  conversations: (ConversationMetadata | DraftConversation)[];
+  currentConversation: (ConversationMetadata | DraftConversation | null);
   messages: Message[];
   isLoading: boolean;
   isAgentThinking: boolean;
@@ -29,7 +45,7 @@ interface LocalConversation extends ConversationMetadata {
 
 export const useChat = (): UseChatReturn => {
   const { user, isGuest } = useAuth();
-  const [conversations, setConversations] = useState<ConversationMetadata[]>([]);
+  const [conversations, setConversations] = useState<(ConversationMetadata | DraftConversation)[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,28 +98,31 @@ export const useChat = (): UseChatReturn => {
             execution_time_ms: data.message.execution_time_ms,
           };
 
-          setMessages(prevMessages => {
-            // Avoid duplicates
-            if (prevMessages.some(msg => msg.id === newMessage.id)) {
-              return prevMessages;
+          // Only add non-user messages from SSE
+          if (newMessage.role !== 'user') {
+            setMessages(prevMessages => {
+              // Avoid duplicates
+              if (prevMessages.some(msg => msg.id === newMessage.id)) {
+                return prevMessages;
+              }
+              return [...prevMessages, newMessage];
+            });
+
+            // Update conversation in sidebar
+            setConversations(prevConversations => 
+              prevConversations.map(conv => 
+                conv.id === currentConversationId 
+                  ? { ...conv, updated_at: new Date().toISOString(), message_count: conv.message_count + 1 }
+                  : conv
+              )
+            );
+
+            // Stop loading state when AI responds
+            if (newMessage.role === 'assistant') {
+              setIsLoading(false);
+              setIsAgentThinking(false);
+              setAgentThoughts([]);
             }
-            return [...prevMessages, newMessage];
-          });
-
-          // Update conversation in sidebar
-          setConversations(prevConversations => 
-            prevConversations.map(conv => 
-              conv.id === currentConversationId 
-                ? { ...conv, updated_at: new Date().toISOString(), message_count: conv.message_count + 1 }
-                : conv
-            )
-          );
-
-          // Stop loading state when AI responds
-          if (newMessage.role === 'assistant') {
-            setIsLoading(false);
-            setIsAgentThinking(false);
-            setAgentThoughts([]);
           }
         }
       } catch (error) {
@@ -232,48 +251,24 @@ export const useChat = (): UseChatReturn => {
   const createNewConversation = useCallback((): string => {
     const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    if (isGuest) {
-      // For guests, create the conversation locally
-      const newConversation: ConversationMetadata = {
-        id: conversationId,
-        title: 'New Conversation',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: userId,
-        message_count: 0,
-        is_guest: true,
-      };
+    // Create a draft conversation
+    const draftConversation: DraftConversation = {
+      id: conversationId,
+      isDraft: true,
+      created_at: new Date().toISOString(),
+      title: 'New Chat',
+      message_count: 0,
+      updated_at: new Date().toISOString(),
+      is_guest: isGuest,
+    };
 
-      const updatedConversations = [newConversation, ...conversations];
-      setConversations(updatedConversations);
-      setCurrentConversationId(conversationId);
-      setMessages([]);
-      setError(null);
-      
-      // Save for guests
-      saveGuestConversations(updatedConversations, []);
-    } else {
-      // For authenticated users, we'll let the backend create it when first message is sent
-      // But we'll create a placeholder conversation in the UI to show it immediately
-      const newConversation: ConversationMetadata = {
-        id: conversationId,
-        title: 'New Conversation',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: userId,
-        message_count: 0,
-        is_guest: false,
-      };
-
-      const updatedConversations = [newConversation, ...conversations];
-      setConversations(updatedConversations);
-      setCurrentConversationId(conversationId);
-      setMessages([]);
-      setError(null);
-    }
+    setConversations(prev => [draftConversation, ...prev]);
+    setCurrentConversationId(conversationId);
+    setMessages([]);
+    setError(null);
     
     return conversationId;
-  }, [conversations, userId, isGuest, saveGuestConversations]);
+  }, [isGuest]);
 
   // Select a conversation
   const selectConversation = useCallback(async (conversationId: string) => {
@@ -309,19 +304,29 @@ export const useChat = (): UseChatReturn => {
   // Delete a conversation
   const deleteConversation = useCallback(async (conversationId: string) => {
     try {
+      const conv = conversations.find(c => c.id === conversationId);
+      
+      // If it's a draft, just remove it from state
+      if (conv && isDraft(conv)) {
+        setConversations(prev => prev.filter(c => c.id !== conversationId));
+        if (conversationId === currentConversationId) {
+          setCurrentConversationId(null);
+          setMessages([]);
+        }
+        return;
+      }
+
+      // Rest of existing delete logic...
       if (!isGuest && userId) {
-        // Delete from backend
         const token = authService.getStoredToken();
         if (token) {
           await conversationApi.deleteConversation(token, conversationId);
         }
       }
       
-      // Update local state
       const updatedConversations = conversations.filter(conv => conv.id !== conversationId);
       setConversations(updatedConversations);
       
-      // If we're deleting the current conversation, select another one or clear
       if (conversationId === currentConversationId) {
         if (updatedConversations.length > 0) {
           await selectConversation(updatedConversations[0].id);
@@ -331,8 +336,12 @@ export const useChat = (): UseChatReturn => {
         }
       }
       
-      // Save for guests
-      saveGuestConversations(updatedConversations, messages);
+      if (isGuest) {
+        saveGuestConversations(
+          updatedConversations.filter(conv => !isDraft(conv)) as ConversationMetadata[],
+          messages
+        );
+      }
       
     } catch (error) {
       console.error('Failed to delete conversation:', error);
@@ -342,6 +351,11 @@ export const useChat = (): UseChatReturn => {
 
   // Add a message to the current conversation
   const addMessage = useCallback((message: Omit<Message, 'id' | 'timestamp'>) => {
+    // Only add AI messages through this function
+    if (message.role === 'user') {
+      return null;
+    }
+
     const newMessage: Message = {
       ...message,
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -359,12 +373,6 @@ export const useChat = (): UseChatReturn => {
           message_count: conv.message_count + 1,
           updated_at: new Date().toISOString(),
         };
-        
-        // Update title if it's the first user message
-        if (conv.message_count === 0 && message.role === 'user') {
-          updatedConv.title = message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '');
-        }
-        
         return updatedConv;
       }
       return conv;
@@ -387,21 +395,66 @@ export const useChat = (): UseChatReturn => {
     setLastUserMessage(content);
     setIsAgentThinking(true);
 
+    let conversationId = currentConversationId;
+
     try {
       // Create conversation if none exists
-      let conversationId = currentConversationId;
       if (!conversationId) {
         conversationId = createNewConversation();
       }
 
-      if (isGuest) {
-        // For guests, manage local state
-        const userMessage = addMessage({
-          content: content.trim(),
-          role: 'user',
-          conversation_id: conversationId,
-        });
+      // Convert draft to real conversation if this is the first message
+      const currentConv = conversations.find(conv => conv.id === conversationId);
+      if (currentConv && isDraft(currentConv)) {
+        const newConversation: ConversationMetadata = {
+          id: conversationId,
+          title: content.slice(0, 50) + (content.length > 50 ? '...' : ''),
+          created_at: currentConv.created_at,
+          updated_at: new Date().toISOString(),
+          user_id: userId,
+          message_count: 1,
+          is_guest: isGuest,
+        };
 
+        setConversations(prev => [
+          newConversation,
+          ...prev.filter(conv => conv.id !== conversationId)
+        ]);
+
+        if (isGuest) {
+          saveGuestConversations(
+            [newConversation, ...conversations.filter(conv => !isDraft(conv) && conv.id !== conversationId)] as ConversationMetadata[],
+            []
+          );
+        }
+      } else if (currentConv && !isDraft(currentConv)) {
+        // Update existing conversation
+        setConversations(prevConversations => 
+          prevConversations.map(conv => 
+            conv.id === conversationId && !isDraft(conv)
+              ? {
+                  ...conv,
+                  message_count: conv.message_count + 1,
+                  updated_at: new Date().toISOString(),
+                }
+              : conv
+          )
+        );
+      }
+
+      // Optimistically add user message to UI
+      const userMessage: Message = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        content: content.trim(),
+        role: 'user',
+        conversation_id: conversationId,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, userMessage]);
+
+      if (isGuest) {
+        // Rest of guest logic...
         if (withReasoning) {
           const { response, toolCalls, executionTimeMs } = await chatApi.sendMessageWithReasoning(content, conversationId);
           addMessage({
@@ -422,8 +475,7 @@ export const useChat = (): UseChatReturn => {
         setIsLoading(false);
         setIsAgentThinking(false);
       } else if (userId) {
-        // For authenticated users, just send to backend
-        // Real-time updates will come via SSE
+        // Rest of authenticated user logic...
         const token = authService.getStoredToken();
         
         if (withReasoning) {
@@ -432,10 +484,7 @@ export const useChat = (): UseChatReturn => {
           await chatApi.sendMessage(content, conversationId, token || undefined);
         }
 
-        // Set current conversation ID if it was new
         setCurrentConversationId(conversationId);
-        
-        // Loading state will be cleared when SSE receives the AI response
       }
 
     } catch (err) {
@@ -444,10 +493,30 @@ export const useChat = (): UseChatReturn => {
       console.error('Send message error:', err);
       setIsLoading(false);
       setIsAgentThinking(false);
+      
+      // If this was a draft conversation, remove it on error
+      const currentConv = conversations.find(conv => conv.id === conversationId);
+      if (currentConv && isDraft(currentConv)) {
+        setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      } else {
+        // Otherwise rollback the message count
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === conversationId && !isDraft(conv)
+              ? {
+                  ...conv,
+                  message_count: Math.max(0, conv.message_count - 1),
+                }
+              : conv
+          )
+        );
+      }
+      
+      setMessages(prev => prev.filter(msg => msg.content !== content.trim()));
     } finally {
       setAgentThoughts([]);
     }
-  }, [currentConversationId, createNewConversation, addMessage, isGuest, userId]);
+  }, [currentConversationId, createNewConversation, addMessage, isGuest, userId, conversations, saveGuestConversations]);
 
   // Retry the last message
   const retryLastMessage = useCallback(async () => {

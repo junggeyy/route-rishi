@@ -8,14 +8,26 @@ import {
   X,
   Clock,
   Sparkles,
-  LogOut
+  LogOut,
+  Edit3  // Add Edit3 icon for draft state
 } from 'lucide-react';
 import icon from '../assets/icon.svg';
 import type { ConversationMetadata } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
+// Add type for draft conversations
+interface DraftConversation {
+  id: string;
+  isDraft: true;
+  created_at: string;
+  title: string;
+  message_count: number;
+  updated_at: string;
+  is_guest: boolean;
+}
+
 interface SidebarProps {
-  conversations: ConversationMetadata[];
+  conversations: (ConversationMetadata | DraftConversation)[];
   currentConversationId: string | null;
   onSelectConversation: (conversationId: string) => void;
   onNewConversation?: () => void;
@@ -23,6 +35,11 @@ interface SidebarProps {
   onCloseSidebar: () => void;
   collapsed?: boolean;
   isGuest?: boolean;
+}
+
+// Add type guard
+function isDraft(conversation: DraftConversation | ConversationMetadata): conversation is DraftConversation {
+  return 'isDraft' in conversation;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -126,56 +143,71 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
           ) : (
-            conversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                onClick={() => onSelectConversation(conversation.id)}
-                className={`
-                  group cursor-pointer p-3 rounded-lg transition-all duration-200 hover:bg-secondary/80
-                  ${currentConversationId === conversation.id 
-                    ? 'bg-accent/20 border-l-4 border-accent' 
-                    : 'hover:bg-secondary/60'
-                  }
-                `}
-                title={collapsed ? conversation.title : ""}
-              >
-                {collapsed ? (
-                  <div className="flex justify-center">
-                    <MessageSquare className="w-5 h-5 text-text-secondary" />
-                  </div>
-                ) : (
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <MessageSquare className="w-4 h-4 text-text-secondary flex-shrink-0" />
-                        <h3 className="text-sm font-medium text-text-primary truncate">
-                          {conversation.title}
-                        </h3>
+            conversations.map((conversation) => {
+              const isDraftConv = isDraft(conversation);
+              
+              return (
+                <div
+                  key={conversation.id}
+                  onClick={() => onSelectConversation(conversation.id)}
+                  className={`
+                    group cursor-pointer p-3 rounded-lg transition-all duration-200 hover:bg-secondary/80
+                    ${isDraftConv ? 'bg-secondary/40 border border-border/30' : ''}
+                    ${currentConversationId === conversation.id 
+                      ? 'bg-accent/20 border-l-4 border-accent' 
+                      : 'hover:bg-secondary/60'
+                    }
+                  `}
+                  title={collapsed ? conversation.title : ""}
+                >
+                  {collapsed ? (
+                    <div className="flex justify-center">
+                      {isDraftConv ? (
+                        <Edit3 className="w-5 h-5 text-text-secondary/70" />
+                      ) : (
+                        <MessageSquare className="w-5 h-5 text-text-secondary" />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          {isDraftConv ? (
+                            <Edit3 className="w-4 h-4 text-text-secondary/70" />
+                          ) : (
+                            <MessageSquare className="w-4 h-4 text-text-secondary" />
+                          )}
+                          <h3 className={`text-sm font-medium truncate ${isDraftConv ? 'text-text-secondary/70' : 'text-text-primary'}`}>
+                            {conversation.title}
+                          </h3>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2 mt-2">
+                          <Clock className="w-3 h-3 text-text-secondary/60" />
+                          <span className="text-xs text-text-secondary/60">
+                            {formatDate(new Date(conversation.updated_at))}
+                          </span>
+                          {!isDraftConv && (
+                            <span className="text-xs text-text-secondary/60">
+                              • {conversation.message_count} messages
+                            </span>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="flex items-center space-x-2 mt-2">
-                        <Clock className="w-3 h-3 text-text-secondary/60" />
-                        <span className="text-xs text-text-secondary/60">
-                          {formatDate(new Date(conversation.updated_at))}
-                        </span>
-                        <span className="text-xs text-text-secondary/60">
-                          • {conversation.message_count} messages
-                        </span>
-                      </div>
+                      {onDeleteConversation && !isGuest && (
+                        <button
+                          onClick={(e) => handleDeleteConversation(e, conversation.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-danger/20 rounded transition-all duration-200"
+                        >
+                          <Trash2 className="w-4 h-4 text-danger" />
+                        </button>
+                      )}
                     </div>
-                    
-                    {onDeleteConversation && !isGuest && (
-                      <button
-                        onClick={(e) => handleDeleteConversation(e, conversation.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-danger/20 rounded transition-all duration-200"
-                      >
-                        <Trash2 className="w-4 h-4 text-danger" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
