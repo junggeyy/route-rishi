@@ -53,9 +53,17 @@ class AuthService {
 
   async loginWithGoogle(): Promise<AuthResponse> {
     try {
-      // For now, we'll redirect to Google OAuth endpoint
-      // In a real implementation, this would handle the Google OAuth flow
-      window.location.href = `${this.baseURL}/google/login`;
+      // Get OAuth URL from backend
+      const response = await axios.get(`${this.baseURL}/google/login`);
+      const { redirect_url } = response.data;
+      
+      // Store the current page URL so we can redirect back after auth
+      localStorage.setItem('oauth_return_url', window.location.href);
+      
+      // Redirect to Google OAuth (full page redirect)
+      window.location.href = redirect_url;
+      
+      // This will never be reached due to redirect, but TypeScript needs it
       return Promise.reject(new Error('Redirecting to Google...'));
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Google login failed');
@@ -64,8 +72,17 @@ class AuthService {
 
   async signupWithGoogle(): Promise<AuthResponse> {
     try {
-      // For now, we'll redirect to Google OAuth endpoint
-      window.location.href = `${this.baseURL}/google/signup`;
+      // Get OAuth URL from backend
+      const response = await axios.get(`${this.baseURL}/google/signup`);
+      const { redirect_url } = response.data;
+      
+      // Store the current page URL so we can redirect back after auth
+      localStorage.setItem('oauth_return_url', window.location.href);
+      
+      // Redirect to Google OAuth (full page redirect)
+      window.location.href = redirect_url;
+      
+      // This will never be reached due to redirect, but TypeScript needs it
       return Promise.reject(new Error('Redirecting to Google...'));
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Google signup failed');

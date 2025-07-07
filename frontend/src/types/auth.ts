@@ -2,7 +2,6 @@ export interface User {
   id: string;
   email: string;
   fullName: string;
-  photoURL?: string;
   provider: 'email' | 'google' | 'guest';
   createdAt: string;
   updatedAt: string;

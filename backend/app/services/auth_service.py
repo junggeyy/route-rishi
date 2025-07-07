@@ -1,7 +1,10 @@
 import logging
 from datetime import datetime, timezone
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request
 from typing import Optional, Dict, Any, Set
+import urllib.parse
+import secrets
+import httpx
 
 from app.services.firebase_service import FirebaseService
 from app.services.firebase_client_service import firebase_client_service
@@ -13,7 +16,12 @@ from app.schemas.auth_schemas import (
     AuthResponse,
     RefreshTokenRequest
 )
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
+
+# Module-level OAuth state storage
+_oauth_states: Dict[str, Dict[str, Any]] = {}
 
 class AuthService:
     """Authentication service handling user signup, login, token management"""
@@ -24,6 +32,19 @@ class AuthService:
         self.jwt = jwt_service
         # Simple in-memory token blacklist for logout
         self._blacklisted_tokens: Set[str] = set()
+        
+        # Google OAuth configuration
+        self.google_oauth_config = {
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+            "scope": "openid email profile",
+            "auth_url": "https://accounts.google.com/o/oauth2/auth",
+            "token_url": "https://oauth2.googleapis.com/token",
+            "userinfo_url": "https://www.googleapis.com/oauth2/v2/userinfo"
+        }
+        
+
     
     async def signup_with_email(self, signup_data: SignupRequest)-> AuthResponse:
         """
@@ -266,6 +287,162 @@ class AuthService:
             logger.error(f"Get user by token failed: {str(e)}")
             return None
 
+    async def get_google_oauth_url(self, flow_type: str, request: Request) -> str:
+        """
+        Generate Google OAuth URL for authentication.
+        
+        Args:
+            flow_type: "login" or "signup"
+            request: FastAPI request object
+            
+        Returns:
+            str: Google OAuth authorization URL
+        """
+        try:
+            # Generate secure random state
+            state = secrets.token_urlsafe(32)
+            
+            # Store state with flow type and timestamp
+            _oauth_states[state] = {
+                "flow_type": flow_type,
+                "timestamp": datetime.now(timezone.utc).timestamp(),
+                "ip": request.client.host if request.client else "unknown"
+            }
+            
+            # Clean up old states (older than 10 minutes)
+            current_time = datetime.now(timezone.utc).timestamp()
+            expired_states = [
+                s for s, data in _oauth_states.items()
+                if current_time - data.get("timestamp", 0) > 600
+            ]
+            for s in expired_states:
+                del _oauth_states[s]
+            
+            # Build OAuth URL
+            params = {
+                "client_id": self.google_oauth_config["client_id"],
+                "redirect_uri": self.google_oauth_config["redirect_uri"],
+                "scope": self.google_oauth_config["scope"],
+                "response_type": "code",
+                "state": state,
+                "access_type": "offline",
+                "prompt": "consent"
+            }
+            
+            auth_url = f"{self.google_oauth_config['auth_url']}?{urllib.parse.urlencode(params)}"
+            
+            logger.info(f"Generated Google OAuth URL for {flow_type}")
+            return auth_url
+            
+        except Exception as e:
+            logger.error(f"Error generating Google OAuth URL: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to generate Google OAuth URL"
+            )
+    
+    async def handle_google_oauth_callback(self, code: str, state: str) -> AuthResponse:
+        """
+        Handle Google OAuth callback and authenticate/create user.
+        
+        Args:
+            code: Authorization code from Google
+            state: State parameter to prevent CSRF
+            
+        Returns:
+            AuthResponse: User data with access and refresh tokens
+        """
+        try:
+            # Verify state
+            if state not in _oauth_states:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid OAuth state"
+                )
+            
+            flow_type = _oauth_states[state]["flow_type"]
+            del _oauth_states[state]  # Clean up used state
+            
+            # Exchange code for tokens
+            google_tokens = await self._exchange_google_code_for_tokens(code)
+            
+            # Get user info from Google
+            google_user_info = await self._get_google_user_info(google_tokens["access_token"])
+            
+            # Check if user exists
+            existing_user = await self.firebase.get_user_by_email(google_user_info["email"])
+            
+            if existing_user and flow_type == "signup":
+                # User exists but trying to signup
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="User already exists. Please login instead."
+                )
+            
+            if not existing_user and flow_type == "login":
+                # User doesn't exist but trying to login
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found. Please signup first."
+                )
+            
+            # Create or authenticate user
+            if existing_user:
+                # Existing user login
+                user_id = existing_user['uid']
+                user_profile = await self.firebase.get_user_profile(user_id)
+                
+                if not user_profile:
+                    # Create profile if missing
+                    user_profile = await self._create_user_profile(
+                        uid=user_id,
+                        email=google_user_info["email"],
+                        full_name=google_user_info.get("name", ""),
+                        provider="google"
+                    )
+                
+                # Update last login
+                await self._update_last_login(user_id)
+                
+            else:
+                # New user signup
+                # Create user in Firebase Auth
+                firebase_user = await self._create_firebase_user_from_google(google_user_info)
+                user_id = firebase_user['uid']
+                
+                # Create user profile
+                user_profile = await self._create_user_profile(
+                    uid=user_id,
+                    email=google_user_info["email"],
+                    full_name=google_user_info.get("name", ""),
+                    provider="google"
+                )
+                
+                existing_user = firebase_user
+            
+            # Generate JWT tokens
+            tokens = await self._generate_token_pair(user_id)
+            user_response = self._create_user_response(user_profile, existing_user)
+            
+            logger.info(f"Google OAuth {flow_type} successful for: {google_user_info['email']}")
+            
+            return AuthResponse(
+                user=user_response,
+                token=tokens['access_token'],
+                refreshToken=tokens['refresh_token']
+            )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Google OAuth callback error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Google authentication failed"
+            )
+    
+
+
     ### PRIVATE HELPER METHODS
 
     async def _create_firebase_user(self, email: str, password: str, display_name: str) -> Dict[str, Any]:
@@ -408,3 +585,86 @@ class AuthService:
         
         if expired_tokens:
             logger.info(f"Cleaned up {len(expired_tokens)} expired tokens from blacklist")
+
+    ### PRIVATE HELPER METHODS FOR GOOGLE OAUTH
+    
+    async def _exchange_google_code_for_tokens(self, code: str) -> Dict[str, Any]:
+        """Exchange authorization code for access tokens"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self.google_oauth_config["token_url"],
+                    data={
+                        "client_id": self.google_oauth_config["client_id"],
+                        "client_secret": self.google_oauth_config["client_secret"],
+                        "code": code,
+                        "grant_type": "authorization_code",
+                        "redirect_uri": self.google_oauth_config["redirect_uri"],
+                    }
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"Token exchange failed: {response.text}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Failed to exchange authorization code"
+                    )
+                
+                return response.json()
+                
+        except httpx.HTTPError as e:
+            logger.error(f"HTTP error during token exchange: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Token exchange failed"
+            )
+    
+    async def _get_google_user_info(self, access_token: str) -> Dict[str, Any]:
+        """Get user information from Google API"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    self.google_oauth_config["userinfo_url"],
+                    headers={"Authorization": f"Bearer {access_token}"}
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"User info request failed: {response.text}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Failed to get user information"
+                    )
+                
+                return response.json()
+                
+        except httpx.HTTPError as e:
+            logger.error(f"HTTP error during user info request: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to get user information"
+            )
+    
+    async def _create_firebase_user_from_google(self, google_user_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Create Firebase user from Google user info"""
+        try:
+            from firebase_admin import auth
+            
+            user_record = auth.create_user(
+                email=google_user_info["email"],
+                display_name=google_user_info.get("name", ""),
+                email_verified=google_user_info.get("verified_email", False)
+            )
+            
+            return {
+                'uid': user_record.uid,
+                'email': user_record.email,
+                'display_name': user_record.display_name,
+                'email_verified': user_record.email_verified
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating Firebase user from Google: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create user account"
+            )

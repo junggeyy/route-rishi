@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi.responses import RedirectResponse
 from app.services.auth_service import AuthService
 from app.services.firebase_service import firebase_service
 from app.services.jwt_service import JWTService
 from app.middleware.auth_middleware import get_current_user_required
+from app.core.config import settings
 from app.schemas.auth_schemas import (
     SignupRequest,
     LoginRequest,
@@ -154,3 +156,108 @@ async def get_current_user(
         HTTPException: If token is invalid or missing
     """
     return current_user 
+
+@router.get("/google/login")
+async def google_login_redirect(request: Request):
+    """
+    Redirect to Google OAuth for login.
+    This endpoint initiates the OAuth flow.
+    """
+    try:
+        auth_service = get_auth_service()
+        redirect_url = await auth_service.get_google_oauth_url("login", request)
+        return {"redirect_url": redirect_url}
+    except Exception as e:
+        logger.error(f"Google login redirect error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to initiate Google login"
+        )
+
+@router.get("/google/signup")
+async def google_signup_redirect(request: Request):
+    """
+    Redirect to Google OAuth for signup.
+    This endpoint initiates the OAuth flow.
+    """
+    try:
+        auth_service = get_auth_service()
+        redirect_url = await auth_service.get_google_oauth_url("signup", request)
+        return {"redirect_url": redirect_url}
+    except Exception as e:
+        logger.error(f"Google signup redirect error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to initiate Google signup"
+        )
+
+@router.get("/google/callback")
+async def google_oauth_callback(
+    request: Request,
+    code: str = None,
+    state: str = None,
+    error: str = None
+):
+    """
+    Handle Google OAuth callback.
+    This endpoint processes the OAuth response and redirects back to frontend.
+    """
+    try:
+        if error:
+            logger.error(f"Google OAuth error: {error}")
+            # Redirect to frontend with error
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/login?error={error}",
+                status_code=302
+            )
+        
+        if not code:
+            logger.error("No authorization code received")
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/login?error=No authorization code received",
+                status_code=302
+            )
+        
+        auth_service = get_auth_service()
+        auth_response = await auth_service.handle_google_oauth_callback(code, state)
+        
+        # Instead of HTML page, encode auth data in URL parameters
+        import json
+        import base64
+        import urllib.parse
+        
+        user_dict = auth_response.user.dict()
+        
+        # Encode auth data safely
+        user_data_b64 = base64.b64encode(json.dumps(user_dict).encode('utf-8')).decode('utf-8')
+        token_b64 = base64.b64encode(auth_response.token.encode('utf-8')).decode('utf-8')
+        refresh_token_b64 = base64.b64encode(auth_response.refreshToken.encode('utf-8')).decode('utf-8')
+        
+        # Build redirect URL with auth data
+        params = {
+            'oauth': 'success',
+            'token': token_b64,
+            'refresh_token': refresh_token_b64,
+            'user_data': user_data_b64
+        }
+        
+        redirect_url = f"{settings.FRONTEND_URL}/?{urllib.parse.urlencode(params)}"
+        
+        logger.info(f"Redirecting to frontend with auth data: {redirect_url[:100]}...")
+        
+        return RedirectResponse(url=redirect_url, status_code=302)
+        
+    except HTTPException as e:
+        logger.error(f"Google OAuth callback error: {e.detail}")
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/login?error={e.detail}",
+            status_code=302
+        )
+    except Exception as e:
+        logger.error(f"Google OAuth callback error: {str(e)}")
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/login?error=Authentication failed",
+            status_code=302
+        )
+
+ 

@@ -80,6 +80,25 @@ class FirebaseService:
         except Exception as e:
             logger.error(f"Error getting user: {str(e)}")
             return None
+    
+    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user information from Firebase Auth by email"""
+        try:
+            user_record = auth.get_user_by_email(email)
+            return {
+                'uid': user_record.uid,
+                'email': user_record.email,
+                'display_name': user_record.display_name,
+                'email_verified': user_record.email_verified,
+                'created_at': user_record.user_metadata.creation_timestamp,
+                'last_sign_in': user_record.user_metadata.last_sign_in_timestamp
+            }
+        except auth.UserNotFoundError:
+            logger.warning(f"User not found with email: {email}")
+            return None
+        except Exception as e:
+            logger.error(f"Error getting user by email: {str(e)}")
+            return None
         
     async def create_user_profile(self, uid: str, user_data: Dict[str, Any]) -> bool:
         """Create user profile in Firestore"""
