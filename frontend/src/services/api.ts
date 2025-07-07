@@ -10,7 +10,12 @@ import type {
   Message,
   ToolCall,
   SavedItinerary,
+  ConversationMetadata,
+  Conversation,
 } from '../types';
+
+// API Configuration
+const API_BASE_URL = 'http://localhost:8000';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -101,13 +106,17 @@ export const currencyApi = {
 
 // Chat API (we'll need to create this endpoint in the backend)
 export const chatApi = {
-  sendMessage: async (message: string, conversationId: string): Promise<string> => {
+  sendMessage: async (message: string, conversationId: string, token?: string): Promise<string> => {
     try {
-      // This endpoint doesn't exist yet - we'll need to create it in the backend
+      const headers: any = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await api.post('/chat/message', {
         message,
         conversation_id: conversationId,
-      });
+      }, { headers });
       return response.data.response;
     } catch (error) {
       console.error('Chat message error:', error);
@@ -117,17 +126,23 @@ export const chatApi = {
 
   sendMessageWithReasoning: async (
     message: string, 
-    conversationId: string
+    conversationId: string,
+    token?: string
   ): Promise<{
     response: string;
     toolCalls: ToolCall[];
     executionTimeMs: number;
   }> => {
     try {
+      const headers: any = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await api.post('/chat/message-with-reasoning', {
         message,
         conversation_id: conversationId,
-      });
+      }, { headers });
       
       return {
         response: response.data.response,
@@ -214,6 +229,85 @@ What would you like to explore today? Just tell me about your travel plans and I
   },
 };
 
+// Conversation API
+export const conversationApi = {
+  getUserConversations: async (token: string, page: number = 1, pageSize: number = 20): Promise<ConversationMetadata[]> => {
+    try {
+      const response = await api.get('/conversations/', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        params: {
+          page,
+          page_size: pageSize
+        }
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Get user conversations error:', error);
+      throw new Error('Failed to get conversations');
+    }
+  },
+
+  getConversation: async (token: string, conversationId: string): Promise<Conversation> => {
+    try {
+      const response = await api.get(`/conversations/${conversationId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get conversation error:', error);
+      throw new Error('Failed to get conversation');
+    }
+  },
+
+  getConversationMessages: async (
+    token: string, 
+    conversationId: string, 
+    page: number = 1, 
+    pageSize: number = 50,
+    order: 'asc' | 'desc' = 'asc'
+  ): Promise<Message[]> => {
+    try {
+      const response = await api.get(`/conversations/${conversationId}/messages`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        params: {
+          page,
+          page_size: pageSize,
+          order
+        }
+      });
+      const rawMessages = response.data || [];
+      // Convert timestamp strings to Date objects for proper rendering
+      const convertedMessages: Message[] = rawMessages.map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp),
+      }));
+      return convertedMessages;
+    } catch (error) {
+      console.error('Get conversation messages error:', error);
+      throw new Error('Failed to get conversation messages');
+    }
+  },
+
+  deleteConversation: async (token: string, conversationId: string): Promise<void> => {
+    try {
+      await api.delete(`/conversations/${conversationId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error('Delete conversation error:', error);
+      throw new Error('Failed to delete conversation');
+    }
+  },
+};
+
 // Itinerary API
 export const itineraryApi = {
   getSavedItineraries: async (token: string): Promise<SavedItinerary[]> => {
@@ -271,3 +365,6 @@ export const healthApi = {
 };
 
 export default api; 
+
+// Export the base URL for SSE connections
+export { API_BASE_URL }; 

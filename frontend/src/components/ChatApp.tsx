@@ -130,7 +130,7 @@ export const ChatApp = () => {
               <div className="absolute right-0 mt-2 w-56 glass-card rounded-lg shadow-lg py-2 z-50">
                 <div className="px-4 py-2 border-b border-border/50">
                   <p className="text-text-primary font-medium truncate">{user?.fullName}</p>
-                  <p className="text-text-secondary text-sm truncate">{user?.email}</p>
+                  <p className="text-text-secondary text-sm break-all">{user?.email}</p>
                   {isGuest && (
                     <span className="inline-block mt-1 px-2 py-1 bg-warning/20 text-warning text-xs rounded">
                       Guest Mode

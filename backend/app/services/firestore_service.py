@@ -100,20 +100,43 @@ class FirestoreService:
         """get user's conversations with pagination"""
         try:
             query = (self.db.collection('conversations')
-                     .where(filter=FieldFilter('user_id', '==', user_id))
-                     .order_by('last_message_at', direction=firestore.Query.DESCENDING)
-                     .limit(page_size)
-                     .offset((page-1) * page_size))
+                     .where(filter=FieldFilter('user_id', '==', user_id)))
             
             docs = query.stream()
             conversations = []
 
             for doc in docs:
                 data = doc.to_dict()
-                conversations.append(ConversationMetadata(**data))
+                # Ensure we have all required fields with defaults
+                created_at = data.get('created_at', datetime.now(timezone.utc))
+                updated_at = data.get('updated_at', datetime.now(timezone.utc))
+                
+                if isinstance(created_at, datetime):
+                    created_at = created_at.isoformat()
+                if isinstance(updated_at, datetime):
+                    updated_at = updated_at.isoformat()
+                
+                conversation_data = {
+                    'id': doc.id,
+                    'title': data.get('title', 'New Conversation'),
+                    'created_at': created_at,
+                    'updated_at': updated_at,
+                    'user_id': data.get('user_id', user_id),
+                    'message_count': data.get('message_count', 0),
+                    'is_guest': data.get('is_guest', False),
+                }
+                conversations.append(ConversationMetadata(**conversation_data))
 
-            logger.info(f"Retrieved {len(conversations)} conversations for user {user_id}")
-            return conversations
+            # Sort by updated_at(newest first)
+            conversations.sort(key=lambda x: x.updated_at, reverse=True)
+            
+            # Apply pagination
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+            paginated_conversations = conversations[start_idx:end_idx]
+
+            logger.info(f"Retrieved {len(paginated_conversations)} conversations for user {user_id} (page {page})")
+            return paginated_conversations
         except Exception as e:
             logger.error(f"Failed to get conversations for user {user_id}: {e}")
             raise

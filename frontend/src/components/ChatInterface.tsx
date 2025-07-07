@@ -117,7 +117,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
           {messages.map((message) => (
             <div key={message.id} className="w-full">
-              {message.type === 'user' ? (
+              {message.role === 'user' ? (
                 /* User Message */
                 <div className="flex justify-end">
                   <div className="bg-accent/80 text-white p-4 rounded-2xl max-w-2xl">
@@ -143,10 +143,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   </div>
                   <div className="flex-1">
                     {/* Reasoning Display - show before the final message */}
-                    {message.toolCalls && message.toolCalls.length > 0 && (
+                    {message.tool_calls && message.tool_calls.length > 0 && (
                       <ToolCallDisplay 
-                        toolCalls={message.toolCalls} 
-                        executionTimeMs={message.executionTimeMs}
+                        toolCalls={message.tool_calls} 
+                        executionTimeMs={message.execution_time_ms}
                       />
                     )}
                     

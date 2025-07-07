@@ -2,11 +2,11 @@
 export interface Message {
   id: string;
   content: string;
-  type: 'user' | 'ai';
+  role: 'user' | 'assistant';
   timestamp: Date;
-  conversationId: string;
-  toolCalls?: ToolCall[];
-  executionTimeMs?: number;
+  conversation_id: string;
+  tool_calls?: ToolCall[];
+  execution_time_ms?: number;
 }
 
 export interface ToolCall {
@@ -25,12 +25,25 @@ export interface AgentThought {
   timestamp: Date;
 }
 
+export interface ConversationMetadata {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  user_id?: string;
+  message_count: number;
+  is_guest: boolean;
+}
+
 export interface Conversation {
   id: string;
   title: string;
-  messages: Message[];
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: string;
+  updated_at: string;
+  user_id?: string;
+  is_guest: boolean;
+  message_count: number;
+  last_message_at?: string;
 }
 
 // Flight Types (matching backend schemas)

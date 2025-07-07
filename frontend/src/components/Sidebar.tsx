@@ -11,11 +11,11 @@ import {
   LogOut
 } from 'lucide-react';
 import icon from '../assets/icon.svg';
-import type { Conversation } from '../types';
+import type { ConversationMetadata } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {
-  conversations: Conversation[];
+  conversations: ConversationMetadata[];
   currentConversationId: string | null;
   onSelectConversation: (conversationId: string) => void;
   onNewConversation?: () => void;
@@ -153,19 +153,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </h3>
                       </div>
                       
-                      {conversation.messages.length > 0 && (
-                        <p className="text-xs text-text-secondary truncate">
-                          {conversation.messages[conversation.messages.length - 1].content}
-                        </p>
-                      )}
-                      
                       <div className="flex items-center space-x-2 mt-2">
                         <Clock className="w-3 h-3 text-text-secondary/60" />
                         <span className="text-xs text-text-secondary/60">
-                          {formatDate(conversation.updatedAt)}
+                          {formatDate(new Date(conversation.updated_at))}
                         </span>
                         <span className="text-xs text-text-secondary/60">
-                          • {conversation.messages.length} messages
+                          • {conversation.message_count} messages
                         </span>
                       </div>
                     </div>
