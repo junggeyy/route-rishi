@@ -90,7 +90,8 @@ class TravelAgent:
     async def run_query_async(
         self,
         user_query: str,
-        conversation_id: str   
+        conversation_id: str,
+        user_context: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         Runs a user query through the AI agent.
@@ -98,11 +99,19 @@ class TravelAgent:
         Args:
             user_query (str): The user's input query.
             conversation_id (str):  Unique conversation id.
+            user_context (Optional[Dict]): User context including user_id for authenticated users.
         Returns:
             str: The agent's response.
         """
         # gets the history for this conversation, or creates a new one if it's the first message.
         chat_history = self.conversations.setdefault(conversation_id, ChatMessageHistory())
+        
+        # Store user context for tools to access
+        if user_context:
+            self.current_user_context = user_context
+        else:
+            self.current_user_context = None
+            
         try:
             response = await self.agent_executor.ainvoke({"input": user_query,  "chat_history": chat_history.messages})
             
@@ -156,7 +165,8 @@ class TravelAgent:
                 "get_exchange_rate": "Currency Exchange", 
                 "search_flight_offers": "Flight Search",
                 "find_hotels_with_offers": "Hotel Search",
-                "get_current_date": "Current Date"
+                "get_current_date": "Current Date",
+                "create_itinerary_pdf": "PDF Creation"
             }
             
             tool_call = ToolCall(
@@ -172,19 +182,27 @@ class TravelAgent:
     async def run_query_with_reasoning(
         self,
         user_query: str,
-        conversation_id: str   
+        conversation_id: str,
+        user_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Runs a user query through the AI agent with reasoning information.
         Args:
             user_query (str): The user's input query.
             conversation_id (str): Unique conversation id.
+            user_context (Optional[Dict]): User context including user_id for authenticated users.
         Returns:
             Dict[str, Any]: Response with reasoning data including tool calls
         """
         # gets the history for this conversation, or creates a new one if it's the first message.
         chat_history = self.conversations.setdefault(conversation_id, ChatMessageHistory())
         
+        # Store user context for tools to access
+        if user_context:
+            self.current_user_context = user_context
+        else:
+            self.current_user_context = None
+            
         start_time = time.time()
         
         try:

@@ -2,6 +2,7 @@ from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 from datetime import date, datetime
 from typing import List, Optional, Literal
+import asyncio
 
 from app.services.weather_service import weather_service
 from app.services.currency_service import currency_service
@@ -122,14 +123,23 @@ class CreateItineraryPDFInput(BaseModel):
 
 def _create_itinerary_pdf_wrapper(**kwargs):
     """Wrapper function for lazy initialization of itinerary service"""
-    return get_itinerary_service().create_and_save_complete_itinerary(**kwargs)
+    # Try to get user_id from the travel agent's current user context
+    from app.agent.travel_agent import travel_agent
+    
+    # If user_id not explicitly provided, try to get it from agent context
+    if 'user_id' not in kwargs or not kwargs['user_id']:
+        if hasattr(travel_agent, 'current_user_context') and travel_agent.current_user_context:
+            kwargs['user_id'] = travel_agent.current_user_context.get('user_id')
+    
+    return asyncio.run(get_itinerary_service().create_and_save_complete_itinerary(**kwargs))
 
 create_itinerary_pdf_tool = StructuredTool.from_function(
     func=_create_itinerary_pdf_wrapper,
     name="create_itinerary_pdf",
     description="Create a beautiful PDF itinerary document after user confirms their complete travel plan. Use this only after the user has confirmed all flight, hotel, and activity selections and wants to save their complete itinerary. For authenticated users, this will also save the itinerary to their profile.",
     args_schema=CreateItineraryPDFInput,
-    verbose=True
+    verbose=True,
+    handle_tool_error=True
 )
 
 # Combine all tools

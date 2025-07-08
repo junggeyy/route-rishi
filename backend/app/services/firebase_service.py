@@ -30,7 +30,7 @@ class FirebaseService:
             # initializing the app if not initialized
             if not firebase_admin._apps:
                 self._app = firebase_admin.initialize_app(cred, {
-                    'storageBucket': 'routerishi.appspot.com'  # Include storage bucket for PDF service
+                    'storageBucket': settings.FIREBASE_STORAGE_BUCKET
                 })
                 logger.info("Firebase initialized successfully from .env credentials")
             else:

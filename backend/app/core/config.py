@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     FIREBASE_SERVICE_ACCOUNT_KEY: str
     FIREBASE_WEB_API_KEY: str  
+    FIREBASE_STORAGE_BUCKET: str
 
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"

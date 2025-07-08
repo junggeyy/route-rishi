@@ -69,16 +69,16 @@ export const useChat = (): UseChatReturn => {
     return userId ? `routerishi-conversations-${userId}` : 'routerishi-conversations';
   }, [userId, isGuest]);
 
-  // Set up Server-Sent Events for real-time updates
+  // Set up Server-Sent Events for real-time updates (authenticated users only)
   useEffect(() => {
-    if (!currentConversationId) return;
+    if (!currentConversationId || isGuest) return;
 
     // Close existing EventSource
     if (eventSource) {
       eventSource.close();
     }
 
-    // Create new EventSource for this conversation
+    // Create new EventSource for this conversation (authenticated users only)
     const newEventSource = new EventSource(
       `${API_BASE_URL}/api/v1/chat/stream/${currentConversationId}`
     );
@@ -141,7 +141,7 @@ export const useChat = (): UseChatReturn => {
     return () => {
       newEventSource.close();
     };
-  }, [currentConversationId]);
+  }, [currentConversationId, isGuest]);
 
   // Load conversations when user or auth state changes
   useEffect(() => {
@@ -231,21 +231,7 @@ export const useChat = (): UseChatReturn => {
     }
   }, [userId, isGuest]);
 
-  // Save guest conversations to localStorage
-  const saveGuestConversations = useCallback((updatedConversations: ConversationMetadata[], updatedMessages: Message[]) => {
-    if (isGuest) {
-      const storageKey = getStorageKey();
-      // Convert back to local conversation format with messages
-      const localConversations: LocalConversation[] = updatedConversations.map(conv => {
-        const convMessages = conv.id === currentConversationId ? updatedMessages : [];
-        return {
-          ...conv,
-          messages: convMessages,
-        };
-      });
-      localStorage.setItem(storageKey, JSON.stringify(localConversations));
-    }
-  }, [isGuest, getStorageKey, currentConversationId]);
+
 
   // Create a new conversation
   const createNewConversation = useCallback((): string => {
@@ -336,18 +322,13 @@ export const useChat = (): UseChatReturn => {
         }
       }
       
-      if (isGuest) {
-        saveGuestConversations(
-          updatedConversations.filter(conv => !isDraft(conv)) as ConversationMetadata[],
-          messages
-        );
-      }
+      // For guests, localStorage is updated automatically in the addMessage function
       
     } catch (error) {
       console.error('Failed to delete conversation:', error);
       setError('Failed to delete conversation');
     }
-  }, [conversations, currentConversationId, userId, isGuest, selectConversation, saveGuestConversations, messages]);
+  }, [conversations, currentConversationId, userId, isGuest, selectConversation]);
 
   // Add a message to the current conversation
   const addMessage = useCallback((message: Omit<Message, 'id' | 'timestamp'>) => {
@@ -362,29 +343,44 @@ export const useChat = (): UseChatReturn => {
       timestamp: new Date(),
     };
 
-    const updatedMessages = [...messages, newMessage];
-    setMessages(updatedMessages);
-
-    // Update conversation metadata
-    const updatedConversations = conversations.map(conv => {
-      if (conv.id === message.conversation_id) {
-        const updatedConv = {
-          ...conv,
-          message_count: conv.message_count + 1,
-          updated_at: new Date().toISOString(),
-        };
-        return updatedConv;
-      }
-      return conv;
+    // Use functional update to get the latest messages state
+    setMessages(prev => {
+      const updatedMessages = [...prev, newMessage];
+      
+      // Update conversation metadata
+      setConversations(prevConversations => {
+        const updatedConversations = prevConversations.map(conv => {
+          if (conv.id === message.conversation_id) {
+            return {
+              ...conv,
+              message_count: conv.message_count + 1,
+              updated_at: new Date().toISOString(),
+            };
+          }
+          return conv;
+        });
+        
+        // Save for guests with the updated messages
+        if (isGuest) {
+          const storageKey = getStorageKey();
+          const localConversations: LocalConversation[] = updatedConversations
+            .filter(conv => !isDraft(conv))
+            .map(conv => ({
+              ...conv as ConversationMetadata,
+              messages: conv.id === message.conversation_id ? updatedMessages : 
+                       conv.id === currentConversationId ? prev : []
+            }));
+          localStorage.setItem(storageKey, JSON.stringify(localConversations));
+        }
+        
+        return updatedConversations;
+      });
+      
+      return updatedMessages;
     });
-    
-    setConversations(updatedConversations);
-    
-    // Save for guests
-    saveGuestConversations(updatedConversations, updatedMessages);
 
     return newMessage;
-  }, [messages, conversations, saveGuestConversations]);
+  }, [isGuest, getStorageKey, currentConversationId]);
 
   // Send a message with optional reasoning
   const sendMessage = useCallback(async (content: string, withReasoning: boolean = false) => {
@@ -403,6 +399,17 @@ export const useChat = (): UseChatReturn => {
         conversationId = createNewConversation();
       }
 
+      // Optimistically add user message to UI
+      const userMessage: Message = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        content: content.trim(),
+        role: 'user',
+        conversation_id: conversationId,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, userMessage]);
+
       // Convert draft to real conversation if this is the first message
       const currentConv = conversations.find(conv => conv.id === conversationId);
       if (currentConv && isDraft(currentConv)) {
@@ -420,13 +427,6 @@ export const useChat = (): UseChatReturn => {
           newConversation,
           ...prev.filter(conv => conv.id !== conversationId)
         ]);
-
-        if (isGuest) {
-          saveGuestConversations(
-            [newConversation, ...conversations.filter(conv => !isDraft(conv) && conv.id !== conversationId)] as ConversationMetadata[],
-            []
-          );
-        }
       } else if (currentConv && !isDraft(currentConv)) {
         // Update existing conversation
         setConversations(prevConversations => 
@@ -442,19 +442,8 @@ export const useChat = (): UseChatReturn => {
         );
       }
 
-      // Optimistically add user message to UI
-      const userMessage: Message = {
-        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        content: content.trim(),
-        role: 'user',
-        conversation_id: conversationId,
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, userMessage]);
-
       if (isGuest) {
-        // Rest of guest logic...
+        // For guests: handle API response directly, no SSE
         if (withReasoning) {
           const { response, toolCalls, executionTimeMs } = await chatApi.sendMessageWithReasoning(content, conversationId);
           addMessage({
@@ -475,7 +464,7 @@ export const useChat = (): UseChatReturn => {
         setIsLoading(false);
         setIsAgentThinking(false);
       } else if (userId) {
-        // Rest of authenticated user logic...
+        // For authenticated users: use SSE for real-time updates
         const token = authService.getStoredToken();
         
         if (withReasoning) {
@@ -512,11 +501,12 @@ export const useChat = (): UseChatReturn => {
         );
       }
       
+      // Remove the optimistically added user message on error
       setMessages(prev => prev.filter(msg => msg.content !== content.trim()));
     } finally {
       setAgentThoughts([]);
     }
-  }, [currentConversationId, createNewConversation, addMessage, isGuest, userId, conversations, saveGuestConversations]);
+  }, [currentConversationId, createNewConversation, addMessage, isGuest, userId, conversations]);
 
   // Retry the last message
   const retryLastMessage = useCallback(async () => {

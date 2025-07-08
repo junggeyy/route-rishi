@@ -161,9 +161,11 @@ async def send_message(
         })
         
         # Get AI response
+        user_context = {"user_id": user.id} if user else None
         response = await travel_agent.run_query_async(
             user_query=request.message,
-            conversation_id=request.conversation_id
+            conversation_id=request.conversation_id,
+            user_context=user_context
         )
         
         # Create and save AI message
@@ -291,9 +293,11 @@ async def send_message_with_reasoning(
         })
         
         # Using the reasoning method
+        user_context = {"user_id": user.id} if user else None
         response_data = await travel_agent.run_query_with_reasoning(
             user_query=request.message,
-            conversation_id=request.conversation_id
+            conversation_id=request.conversation_id,
+            user_context=user_context
         )
         
         # Create and save AI message with tool calls

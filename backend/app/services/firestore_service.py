@@ -1,6 +1,6 @@
 from google.cloud.firestore_v1 import FieldFilter
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 import uuid
 import logging
 import firebase_admin
@@ -289,10 +289,29 @@ class FirestoreService:
         """Add a saved itinerary to user's profile"""
         try:
             doc_ref = self.db.collection('users').document(user_id)
+            
+            # Convert the model to dict and handle date serialization
+            itinerary_dict = itinerary_doc.model_dump()
+            
+            # Convert date objects to datetime for Firestore compatibility
+            if isinstance(itinerary_dict.get('start_date'), date) and not isinstance(itinerary_dict['start_date'], datetime):
+                itinerary_dict['start_date'] = datetime.combine(itinerary_dict['start_date'], datetime.min.time()).replace(tzinfo=timezone.utc)
+            if isinstance(itinerary_dict.get('end_date'), date) and not isinstance(itinerary_dict['end_date'], datetime):
+                itinerary_dict['end_date'] = datetime.combine(itinerary_dict['end_date'], datetime.min.time()).replace(tzinfo=timezone.utc)
+            
+            # Use set with merge to ensure the document exists, then update with array union
+            # First ensure the document exists with empty itineraries array if needed
+            doc_ref.set({
+                'saved_itineraries': [],
+                'updated_at': datetime.now(timezone.utc)
+            }, merge=True)
+            
+            # Then add the new itinerary
             doc_ref.update({
-                'saved_itineraries': firestore.ArrayUnion([itinerary_doc.model_dump()]),
+                'saved_itineraries': firestore.ArrayUnion([itinerary_dict]),
                 'updated_at': datetime.now(timezone.utc)
             })
+            
             logger.info(f"Saved itinerary {itinerary_doc.id} for user {user_id}")
             return True
         except Exception as e:
