@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.api_router import main_router
 
 app = FastAPI(
-    title="Trava API",
+    title="RouteRishi API",
     description="An API for fetching travel-related "
     "information like flights, hotels, and more. ",
     version="1.0.0"

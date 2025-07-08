@@ -10,7 +10,7 @@ async def main():
     session_id = str(uuid.uuid4())
     print(f"Starting new chat with session ID: {session_id}\n")
     
-    print("Welcome to the Trava AI Agent Playground!")
+    print("Welcome to the RouteRishi Agent Playground!")
     print("Try asking questions like:")
     print("- What's the weather in Paris tomorrow?")
     print("- How much is 1 USD in Euros?")
