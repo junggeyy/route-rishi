@@ -20,12 +20,10 @@ export const ChatApp = () => {
   const guestLimits = useGuestLimits();
 
   const handleSendMessage = async (message: string, withReasoning?: boolean) => {
-    // Check guest limits before sending
     if (isGuest && !guestLimits.incrementMessageCount()) {
-      return; // Block the message if limit exceeded
+      return;
     }
 
-    // Close sidebar on mobile when sending message
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
     }

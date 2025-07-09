@@ -14,12 +14,12 @@ import type {
   Conversation,
 } from '../types';
 
-// API Configuration
-const API_BASE_URL = 'http://localhost:8000';
+// API Configuration - Use environment variable with localhost fallback
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/v1', // Adjust this to match your backend
+  baseURL: `${API_BASE_URL}/api/v1`,
   timeout: 30000, // 30 seconds timeout
   headers: {
     'Content-Type': 'application/json',
@@ -155,12 +155,9 @@ export const chatApi = {
     }
   },
 
-  // For now, we'll create a mock function that simulates the agent response
   sendMessageMock: async (message: string, conversationId: string): Promise<string> => {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
     
-    // Mock responses based on message content
     const lowerMessage = message.toLowerCase();
     
     if (lowerMessage.includes('flight') || lowerMessage.includes('fly')) {
@@ -214,8 +211,7 @@ This is helpful for budgeting your trip and understanding local prices. Which cu
 
 Once I have these details, I can create a day-by-day itinerary with flights, hotels, activities, restaurant recommendations, and local tips! 🎯`;
     }
-    
-    // Default friendly response
+
     return `Hello! I'm RouteRishi, your AI travel companion! 🌍 I'm here to help you plan amazing trips with real-time data.
 
 I can help you with:

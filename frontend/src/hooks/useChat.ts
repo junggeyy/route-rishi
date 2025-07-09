@@ -4,18 +4,16 @@ import { conversationApi, chatApi, API_BASE_URL } from '../services/api';
 import { authService } from '../services/authService';
 import type { ConversationMetadata, Message, AgentThought } from '../types';
 
-// Add draft conversation type
 interface DraftConversation {
   id: string;
   isDraft: true;
   created_at: string;
-  title: string;  // Add title for consistency
-  message_count: number;  // Add message_count for consistency
-  updated_at: string;  // Add updated_at for consistency
-  is_guest: boolean;  // Add is_guest for type compatibility
+  title: string;
+  message_count: number;
+  updated_at: string;
+  is_guest: boolean;
 }
 
-// Helper type guard
 function isDraft(conversation: DraftConversation | ConversationMetadata): conversation is DraftConversation {
   return 'isDraft' in conversation;
 }
@@ -55,13 +53,10 @@ export const useChat = (): UseChatReturn => {
   const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
 
-  // Get current conversation
   const currentConversation = conversations.find(conv => conv.id === currentConversationId) || null;
 
-  // Stable user ID reference to prevent unnecessary re-renders
   const userId = user?.id;
   
-  // Generate user-specific localStorage key
   const getStorageKey = useCallback(() => {
     if (isGuest) {
       return 'routerishi-guest-conversations';
@@ -69,16 +64,13 @@ export const useChat = (): UseChatReturn => {
     return userId ? `routerishi-conversations-${userId}` : 'routerishi-conversations';
   }, [userId, isGuest]);
 
-  // Set up Server-Sent Events for real-time updates (authenticated users only)
   useEffect(() => {
     if (!currentConversationId || isGuest) return;
 
-    // Close existing EventSource
     if (eventSource) {
       eventSource.close();
     }
 
-    // Create new EventSource for this conversation (authenticated users only)
     const newEventSource = new EventSource(
       `${API_BASE_URL}/api/v1/chat/stream/${currentConversationId}`
     );
@@ -98,17 +90,14 @@ export const useChat = (): UseChatReturn => {
             execution_time_ms: data.message.execution_time_ms,
           };
 
-          // Only add non-user messages from SSE
           if (newMessage.role !== 'user') {
             setMessages(prevMessages => {
-              // Avoid duplicates
               if (prevMessages.some(msg => msg.id === newMessage.id)) {
                 return prevMessages;
               }
               return [...prevMessages, newMessage];
             });
 
-            // Update conversation in sidebar
             setConversations(prevConversations => 
               prevConversations.map(conv => 
                 conv.id === currentConversationId 
@@ -117,7 +106,6 @@ export const useChat = (): UseChatReturn => {
               )
             );
 
-            // Stop loading state when AI responds
             if (newMessage.role === 'assistant') {
               setIsLoading(false);
               setIsAgentThinking(false);
@@ -137,23 +125,19 @@ export const useChat = (): UseChatReturn => {
 
     setEventSource(newEventSource);
 
-    // Cleanup on unmount or conversation change
     return () => {
       newEventSource.close();
     };
   }, [currentConversationId, isGuest]);
 
-  // Load conversations when user or auth state changes
   useEffect(() => {
     const loadConversations = async () => {
       try {
         if (isGuest) {
-          // For guests, load from localStorage
           const storageKey = getStorageKey();
           const savedConversations = localStorage.getItem(storageKey);
           if (savedConversations) {
             const parsed: LocalConversation[] = JSON.parse(savedConversations);
-            // Convert to metadata format
             const conversationMetadata: ConversationMetadata[] = parsed.map(conv => ({
               id: conv.id,
               title: conv.title,
@@ -165,54 +149,40 @@ export const useChat = (): UseChatReturn => {
             }));
             setConversations(conversationMetadata);
             
-            // Set the most recent conversation as current
             if (conversationMetadata.length > 0) {
               setCurrentConversationId(conversationMetadata[0].id);
-              // Load messages for the current conversation
               const currentConv = parsed.find(c => c.id === conversationMetadata[0].id);
               if (currentConv) {
                 setMessages(currentConv.messages);
               }
             } else {
-              // No conversations yet
               setCurrentConversationId(null);
               setMessages([]);
             }
           } else {
-            // No saved conversations
             setConversations([]);
             setCurrentConversationId(null);
             setMessages([]);
           }
         } else if (userId) {
-          // For authenticated users, fetch from backend
           const token = authService.getStoredToken();
           if (token) {
             const userConversations = await conversationApi.getUserConversations(token);
             setConversations(userConversations);
             
-            // Set the most recent conversation as current and load its messages
             if (userConversations.length > 0) {
               const latestConv = userConversations[0];
               setCurrentConversationId(latestConv.id);
               const conversationMessages = await conversationApi.getConversationMessages(token, latestConv.id);
               setMessages(conversationMessages);
             } else {
-              // No conversations yet, clear current state
               setCurrentConversationId(null);
               setMessages([]);
             }
           }
-        } else {
-          // User not loaded yet, clear state
-          setConversations([]);
-          setCurrentConversationId(null);
-          setMessages([]);
         }
       } catch (error) {
-        console.error('Failed to load conversations:', error);
-        setError('Failed to load conversations');
-        // Set fallback state on error
+        console.error('Error loading conversations:', error);
         setConversations([]);
         setCurrentConversationId(null);
         setMessages([]);
@@ -220,9 +190,8 @@ export const useChat = (): UseChatReturn => {
     };
 
     loadConversations();
-  }, [userId, isGuest]); // Removed getStorageKey from dependencies to prevent loop
+  }, [userId, isGuest]);
 
-  // Clear conversations when user logs out
   useEffect(() => {
     if (!userId && !isGuest) {
       setConversations([]);
@@ -233,13 +202,11 @@ export const useChat = (): UseChatReturn => {
 
 
 
-  // Create a new conversation
-  const createNewConversation = useCallback((): string => {
-    const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const createNewConversation = useCallback(() => {
+    const newConversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Create a draft conversation
     const draftConversation: DraftConversation = {
-      id: conversationId,
+      id: newConversationId,
       isDraft: true,
       created_at: new Date().toISOString(),
       title: 'New Chat',
@@ -249,21 +216,19 @@ export const useChat = (): UseChatReturn => {
     };
 
     setConversations(prev => [draftConversation, ...prev]);
-    setCurrentConversationId(conversationId);
+    setCurrentConversationId(newConversationId);
     setMessages([]);
     setError(null);
     
-    return conversationId;
+    return newConversationId;
   }, [isGuest]);
 
-  // Select a conversation
   const selectConversation = useCallback(async (conversationId: string) => {
     setCurrentConversationId(conversationId);
     setError(null);
     
     try {
       if (isGuest) {
-        // Load from localStorage
         const storageKey = getStorageKey();
         const savedConversations = localStorage.getItem(storageKey);
         if (savedConversations) {
@@ -274,7 +239,6 @@ export const useChat = (): UseChatReturn => {
           }
         }
       } else if (userId) {
-        // Load from backend
         const token = authService.getStoredToken();
         if (token) {
           const conversationMessages = await conversationApi.getConversationMessages(token, conversationId);
@@ -287,12 +251,10 @@ export const useChat = (): UseChatReturn => {
     }
   }, [userId, isGuest]);
 
-  // Delete a conversation
   const deleteConversation = useCallback(async (conversationId: string) => {
     try {
       const conv = conversations.find(c => c.id === conversationId);
       
-      // If it's a draft, just remove it from state
       if (conv && isDraft(conv)) {
         setConversations(prev => prev.filter(c => c.id !== conversationId));
         if (conversationId === currentConversationId) {
@@ -302,7 +264,6 @@ export const useChat = (): UseChatReturn => {
         return;
       }
 
-      // Rest of existing delete logic...
       if (!isGuest && userId) {
         const token = authService.getStoredToken();
         if (token) {
@@ -322,17 +283,13 @@ export const useChat = (): UseChatReturn => {
         }
       }
       
-      // For guests, localStorage is updated automatically in the addMessage function
-      
     } catch (error) {
       console.error('Failed to delete conversation:', error);
       setError('Failed to delete conversation');
     }
   }, [conversations, currentConversationId, userId, isGuest, selectConversation]);
 
-  // Add a message to the current conversation
   const addMessage = useCallback((message: Omit<Message, 'id' | 'timestamp'>) => {
-    // Only add AI messages through this function
     if (message.role === 'user') {
       return null;
     }
@@ -343,11 +300,9 @@ export const useChat = (): UseChatReturn => {
       timestamp: new Date(),
     };
 
-    // Use functional update to get the latest messages state
     setMessages(prev => {
       const updatedMessages = [...prev, newMessage];
       
-      // Update conversation metadata
       setConversations(prevConversations => {
         const updatedConversations = prevConversations.map(conv => {
           if (conv.id === message.conversation_id) {
@@ -360,7 +315,6 @@ export const useChat = (): UseChatReturn => {
           return conv;
         });
         
-        // Save for guests with the updated messages
         if (isGuest) {
           const storageKey = getStorageKey();
           const localConversations: LocalConversation[] = updatedConversations
@@ -382,7 +336,6 @@ export const useChat = (): UseChatReturn => {
     return newMessage;
   }, [isGuest, getStorageKey, currentConversationId]);
 
-  // Send a message with optional reasoning
   const sendMessage = useCallback(async (content: string, withReasoning: boolean = false) => {
     if (!content.trim()) return;
     
@@ -394,12 +347,10 @@ export const useChat = (): UseChatReturn => {
     let conversationId = currentConversationId;
 
     try {
-      // Create conversation if none exists
       if (!conversationId) {
         conversationId = createNewConversation();
       }
 
-      // Optimistically add user message to UI
       const userMessage: Message = {
         id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         content: content.trim(),
@@ -410,7 +361,6 @@ export const useChat = (): UseChatReturn => {
       
       setMessages(prev => [...prev, userMessage]);
 
-      // Convert draft to real conversation if this is the first message
       const currentConv = conversations.find(conv => conv.id === conversationId);
       if (currentConv && isDraft(currentConv)) {
         const newConversation: ConversationMetadata = {
@@ -428,7 +378,6 @@ export const useChat = (): UseChatReturn => {
           ...prev.filter(conv => conv.id !== conversationId)
         ]);
       } else if (currentConv && !isDraft(currentConv)) {
-        // Update existing conversation
         setConversations(prevConversations => 
           prevConversations.map(conv => 
             conv.id === conversationId && !isDraft(conv)
@@ -443,7 +392,6 @@ export const useChat = (): UseChatReturn => {
       }
 
       if (isGuest) {
-        // For guests: handle API response directly, no SSE
         if (withReasoning) {
           const { response, toolCalls, executionTimeMs } = await chatApi.sendMessageWithReasoning(content, conversationId);
           addMessage({
@@ -464,7 +412,6 @@ export const useChat = (): UseChatReturn => {
         setIsLoading(false);
         setIsAgentThinking(false);
       } else if (userId) {
-        // For authenticated users: use SSE for real-time updates
         const token = authService.getStoredToken();
         
         if (withReasoning) {
@@ -483,12 +430,10 @@ export const useChat = (): UseChatReturn => {
       setIsLoading(false);
       setIsAgentThinking(false);
       
-      // If this was a draft conversation, remove it on error
       const currentConv = conversations.find(conv => conv.id === conversationId);
       if (currentConv && isDraft(currentConv)) {
         setConversations(prev => prev.filter(conv => conv.id !== conversationId));
       } else {
-        // Otherwise rollback the message count
         setConversations(prev => 
           prev.map(conv => 
             conv.id === conversationId && !isDraft(conv)
@@ -501,21 +446,18 @@ export const useChat = (): UseChatReturn => {
         );
       }
       
-      // Remove the optimistically added user message on error
       setMessages(prev => prev.filter(msg => msg.content !== content.trim()));
     } finally {
       setAgentThoughts([]);
     }
   }, [currentConversationId, createNewConversation, addMessage, isGuest, userId, conversations]);
 
-  // Retry the last message
   const retryLastMessage = useCallback(async () => {
     if (lastUserMessage) {
       await sendMessage(lastUserMessage);
     }
   }, [lastUserMessage, sendMessage]);
 
-  // Clear error
   const clearError = useCallback(() => {
     setError(null);
   }, []);

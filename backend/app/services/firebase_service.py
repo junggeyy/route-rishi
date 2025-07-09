@@ -32,10 +32,8 @@ class FirebaseService:
                 self._app = firebase_admin.initialize_app(cred, {
                     'storageBucket': settings.FIREBASE_STORAGE_BUCKET
                 })
-                logger.info("Firebase initialized successfully from .env credentials")
             else:
                 self._app = firebase_admin.get_app()
-                logger.info("Using existing Firebase app instance")
 
             # initializing the Firestore db
             self._db = firestore.client()
@@ -171,7 +169,6 @@ class FirebaseService:
             })
 
             conversation_ref.set(conversation_data, merge=True)
-            logger.info(f"Conversation saved: {conversation_id} for user: {uid}")
             return True
     
         except Exception as e:

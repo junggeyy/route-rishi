@@ -19,7 +19,6 @@ export const SignupPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get redirect path from location state, default to home
   const from = location.state?.from?.pathname || '/';
 
   const validateForm = () => {
@@ -84,7 +83,6 @@ export const SignupPage: React.FC = () => {
     setIsLoading(true);
     try {
       await signupWithGoogle();
-      // Note: signupWithGoogle redirects, so we won't reach this line normally
       navigate(from, { replace: true });
     } catch (error: any) {
       setError(error.message || 'Google signup failed. Please try again.');

@@ -165,7 +165,6 @@ class FirestoreService:
             })
 
             batch.commit()
-            logger.info(f"Added message {message.id} to conversation {message.conversation_id}")
             return message.id
         except Exception as e:
             logger.error(f"Failed to add message {message.id}: {e}")
@@ -293,7 +292,7 @@ class FirestoreService:
             # Convert the model to dict and handle date serialization
             itinerary_dict = itinerary_doc.model_dump()
             
-            # Convert date objects to datetime for Firestore compatibility
+            # Convert date objects to datetime (for Firestore compatibility)
             if isinstance(itinerary_dict.get('start_date'), date) and not isinstance(itinerary_dict['start_date'], datetime):
                 itinerary_dict['start_date'] = datetime.combine(itinerary_dict['start_date'], datetime.min.time()).replace(tzinfo=timezone.utc)
             if isinstance(itinerary_dict.get('end_date'), date) and not isinstance(itinerary_dict['end_date'], datetime):

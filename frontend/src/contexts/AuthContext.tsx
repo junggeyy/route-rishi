@@ -34,14 +34,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
-      // Check if user just completed OAuth
       const urlParams = new URLSearchParams(window.location.search);
       const isOAuthReturn = urlParams.get('oauth') === 'success';
 
       if (isOAuthReturn) {
         console.log('OAuth completion detected, processing URL parameters...');
         
-        // Extract auth data from URL parameters
         const tokenB64 = urlParams.get('token');
         const refreshTokenB64 = urlParams.get('refresh_token');
         const userDataB64 = urlParams.get('user_data');
@@ -50,7 +48,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (tokenB64 && refreshTokenB64 && userDataB64) {
           try {
-            // Decode Base64 data
             const token = atob(tokenB64);
             const refreshToken = atob(refreshTokenB64);
             const userDataJson = atob(userDataB64);
@@ -58,17 +55,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             console.log('Decoded auth data:', { token, refreshToken, userData });
             
-            // Save to localStorage
             localStorage.setItem('authToken', token);
             localStorage.setItem('refreshToken', refreshToken);
             localStorage.setItem('user', userDataJson);
             
             console.log('Auth data saved to localStorage successfully');
             
-            // Clear URL parameters
             window.history.replaceState({}, document.title, window.location.pathname);
             
-            // Set user as authenticated
             setAuthState({
               user: userData,
               isAuthenticated: true,
@@ -86,11 +80,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.error('Missing OAuth data in URL parameters');
         }
         
-        // If we reach here, OAuth failed
         window.history.replaceState({}, document.title, window.location.pathname);
       }
 
-      // Legacy check for localStorage OAuth completion (keeping for compatibility)
       const oauthCompleted = localStorage.getItem('oauth_completed');
       if (oauthCompleted) {
         localStorage.removeItem('oauth_completed');
@@ -110,7 +102,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
-      // Check for guest user first
       const guestUser = authService.getGuestUser();
       if (guestUser) {
         setAuthState({
@@ -122,12 +113,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      // Check for authenticated user (including from Google OAuth redirect)
       const storedUser = authService.getStoredUser();
       const token = authService.getStoredToken();
 
       if (storedUser && token) {
-        // We have auth data, set user immediately
         setAuthState({
           user: storedUser,
           isAuthenticated: true,
@@ -135,11 +124,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isGuest: false,
         });
         
-        // Verify the token is still valid in background
         try {
           const currentUser = await authService.getCurrentUser();
           if (currentUser) {
-            // Token is valid, update user data if needed
             setAuthState({
               user: currentUser,
               isAuthenticated: true,
@@ -147,7 +134,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               isGuest: false,
             });
           } else {
-            // Token is invalid, clear storage
             authService.clearLocalStorage();
             setAuthState({
               user: null,
@@ -157,8 +143,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             });
           }
         } catch (error) {
-          // If verification fails, keep the user logged in locally
-          // This handles cases where the server might be down temporarily
           console.warn('Token verification failed, keeping user logged in locally:', error);
         }
       } else {
@@ -225,12 +209,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithGoogle = async () => {
     try {
       setError(null);
-      // Clear any existing OAuth state
       localStorage.removeItem('oauth_completed');
+      
       setAuthState(prev => ({ ...prev, isLoading: true }));
+      
       await authService.loginWithGoogle();
-      // Note: This will redirect, so the loading state will persist until redirect completes
+      
     } catch (error: any) {
+      console.error('Google login error:', error);
       setError(error.message);
       setAuthState(prev => ({ ...prev, isLoading: false }));
       throw error;
@@ -240,12 +226,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signupWithGoogle = async () => {
     try {
       setError(null);
-      // Clear any existing OAuth state
       localStorage.removeItem('oauth_completed');
+      
       setAuthState(prev => ({ ...prev, isLoading: true }));
+      
       await authService.signupWithGoogle();
-      // Note: This will redirect, so the loading state will persist until redirect completes
+      
     } catch (error: any) {
+      console.error('Google signup error:', error);
       setError(error.message);
       setAuthState(prev => ({ ...prev, isLoading: false }));
       throw error;

@@ -16,7 +16,6 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get redirect path from location state, default to home
   const from = location.state?.from?.pathname || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,7 +53,6 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       await loginWithGoogle();
-      // Note: loginWithGoogle redirects, so we won't reach this line normally
       navigate(from, { replace: true });
     } catch (error: any) {
       setError(error.message || 'Google login failed. Please try again.');

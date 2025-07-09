@@ -9,13 +9,12 @@ import {
   Clock,
   Sparkles,
   LogOut,
-  Edit3  // Add Edit3 icon for draft state
+  Edit3
 } from 'lucide-react';
 import icon from '../assets/icon.svg';
 import type { ConversationMetadata } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
-// Add type for draft conversations
 interface DraftConversation {
   id: string;
   isDraft: true;
@@ -37,7 +36,6 @@ interface SidebarProps {
   isGuest?: boolean;
 }
 
-// Add type guard
 function isDraft(conversation: DraftConversation | ConversationMetadata): conversation is DraftConversation {
   return 'isDraft' in conversation;
 }
