@@ -78,7 +78,7 @@ The backend API will be available at `http://localhost:8000` with interactive do
   </tr>
   <tr>
     <td><img src="https://i.imgur.com/89CfijN.png" alt="ActivityWeather" width="600"></td>
-    <td><img src="https://i.imgur.com/Y0xjbBC.png" alt="SavedItinerary" width="600"></td>
+    <td><img src="https://i.imgur.com/VCdvhVm.png" alt="SavedItinerary" width="600"></td>
     <td><img src="https://i.imgur.com/P91ux7G.png" alt="GuestMode" width="600"></td>
   </tr>
 </table>
