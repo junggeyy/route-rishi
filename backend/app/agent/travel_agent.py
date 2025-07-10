@@ -40,7 +40,7 @@ class TravelAgent:
                 MessagesPlaceholder(variable_name="agent_scratchpad")
             ])
 
-            # initiating the LangChain agent using ReAct pattern
+            # initiating the LangChain agent
             self.agent = create_tool_calling_agent(self.llm, self.tools, self.prompt)
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
