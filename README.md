@@ -72,13 +72,13 @@ The backend API will be available at `http://localhost:8000` with interactive do
 
 <table>
   <tr>
-    <td>![ChatUI](https://i.imgur.com/cu3f3YG.png)</td>
-    <td>![FlightSearch](https://i.imgur.com/KbcJb4W.png)</td>
-    <td>![PDFCreation](https://i.imgur.com/cujdu42.png)</td>
+    <td><img src="https://i.imgur.com/cu3f3YG.png" alt="ChatUI" width="600"></td>
+    <td><img src="https://i.imgur.com/KbcJb4W.png" alt="FlightSearch" width="600"></td>
+    <td><img src="https://i.imgur.com/cujdu42.png" alt="PDFCreation" width="600"></td>
   </tr>
   <tr>
-    <td>![ActivityWeather](https://i.imgur.com/89CfijN.png)</td>
-    <td>![SavedItinerary](https://i.imgur.com/Y0xjbBC.png)</td>
-    <td>![GuestMode](https://i.imgur.com/P91ux7G.png)</td>
+    <td><img src="https://i.imgur.com/89CfijN.png" alt="ActivityWeather" width="600"></td>
+    <td><img src="https://i.imgur.com/Y0xjbBC.png" alt="SavedItinerary" width="600"></td>
+    <td><img src="https://i.imgur.com/P91ux7G.png" alt="GuestMode" width="600"></td>
   </tr>
-</table
+</table>
